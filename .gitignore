@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+poetry.lock
+cov.xml
+.vscode/
+profiler_results
+run_profiler.py

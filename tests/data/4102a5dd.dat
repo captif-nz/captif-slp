@@ -1,0 +1,17 @@
+Road Name	CAPTIF
+Ref Station	0
+Start Pos (m)	0
+End Pos (m)	0
+Direction	increasing
+Wheel Path	Left
+Date	16/01/2019
+File No.	0
+Current Pos	0.0
+*****DATA*****	
+1.000	0.000	NaN
+2.000	0.037	NaN
+3.000	0.075	NaN
+4.000	0.112	NaN
+5.000	0.150	NaN
+6.000	0.187	-0.122
+7.000	0.225	-0.065

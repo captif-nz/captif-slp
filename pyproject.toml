@@ -9,9 +9,14 @@ readme = "README.md"
 keywords = ["CAPTIF"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "~3.9"
 pandas = "^1.3.3"
-captif-data-structures = "^0.2"
+captif-data-structures = "^0.7"
+click = "^8.0.1"
+pydantic = "^1.8.2"
+scipy = "^1.7.1"
+matplotlib = "^3.4.3"
+psutil = "^5.8.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
