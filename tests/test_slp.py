@@ -13,6 +13,7 @@ from captif_slp.slp import (
     calculate_msd,
     calculate_trace_sample_spacing,
     extract_segment_traces_from_trace,
+    find_plates,
     load_reading,
     dropout_correction_start_end,
     dropout_correction_interpolate,
@@ -175,6 +176,44 @@ def test_calculate_msd():
         "relative_height_mm": [1, 0, 0, 0, 0, 2, 0, 0, 0, 0,],
     })
     assert calculate_msd(trace) == ((1 + 2) / 2) - (3/10)
+
+
+def test_find_plates_start_only(data_path):
+    path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
+    _, trace = load_reading(path)
+    trace = trace.iloc[:int(len(trace) / 2)].reset_index(drop=True)
+    start_mm, end_mm = find_plates(trace)
+    assert start_mm == 62.32
+    assert end_mm is None
+
+
+def test_find_plates_end_only(data_path):
+    path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
+    _, trace = load_reading(path)
+    trace = trace.iloc[int(len(trace) / 2):].reset_index(drop=True)
+    start_mm, end_mm = find_plates(trace)
+    assert start_mm is None
+    assert end_mm == 1870.351
+
+
+def test_find_plates(data_path):
+    path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
+    _, trace = load_reading(path)
+    start_mm, end_mm = find_plates(trace)
+    assert start_mm == 62.32
+    assert end_mm == 1870.351
+
+
+def test_find_plates_no_plates(data_path):
+    path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
+    _, trace = load_reading(path)
+    trace = trace.loc[
+        (trace["distance_mm"] > 100) & (trace["distance_mm"] < 1800)
+    ].reset_index(drop=True)
+    start_mm, end_mm = find_plates(trace)
+    assert start_mm is None
+    assert end_mm is None
+
 
 class TestReading:
 

@@ -11,6 +11,10 @@ from scipy.signal.signaltools import sosfiltfilt
 from .signal import build_highpass_filter, build_lowpass_filter
 
 
+PLATE_THRESHOLD = 30  # Height values above PLATE_THRESHOLD are treated as a plate.
+PLATE_BUFFER = 2  # Buffer added/subtracted from the plate location.
+
+
 @dataclass
 class Segment:
     segment_no: int
@@ -40,8 +44,6 @@ class Segment:
         spikes.
 
         """
-        if not self.is_valid:
-            return None
         return calculate_msd(self.resampled_trace)
 
     @property
@@ -66,7 +68,11 @@ class Reading:
     resampled_trace: pd.DataFrame
     segment_length_mm: int
     resampled_sample_spacing_mm: float
-    evaluation_length_m: Optional[float] = None
+    alpha: int
+    evaluation_length_m: Optional[float] = None,
+    start_mm: Optional[float] = None,
+    end_mm: Optional[float] = None,
+    detect_plates: bool = False,
 
     @classmethod
     def from_trace(
@@ -76,23 +82,35 @@ class Reading:
         segment_length_mm: int = 100,
         target_sample_spacing_mm: float = 0.5,
         evaluation_length_m: Optional[float] = None,
+        alpha: int = 3,
+        start_mm: Optional[float] = None,
+        end_mm: Optional[float] = None,
+        detect_plates: bool = False,
     ):
+        if detect_plates and (start_mm is None) and (end_mm is None):
+            start_mm, end_mm = find_plates(trace)
+
+        trace = trim_trace(trace, start_mm, end_mm)
+        trace["relative_height_mm_raw_trace"] = trace["relative_height_mm"]
+
         trace = append_dropout_column(trace)
         trace = apply_dropout_correction(trace)
 
         resampled_trace = build_resampled_trace(trace, target_sample_spacing_mm)
-        resampled_trace = apply_spike_removal(resampled_trace)
 
-        if evaluation_length_m is None:
-            resampled_trace = apply_slope_correction(resampled_trace)
-        else:
+        resampled_trace["relative_height_mm_no_spike_correction"] = resampled_trace["relative_height_mm"]
+        resampled_trace = apply_spike_removal(resampled_trace, alpha=alpha)
+
+        resampled_trace["relative_height_mm_no_highpass_filter"] = resampled_trace["relative_height_mm"]
+        if evaluation_length_m is not None:
             resampled_trace = apply_highpass_filter(resampled_trace, target_sample_spacing_mm)
 
+        resampled_trace["relative_height_mm_no_lowpass_filter"] = resampled_trace["relative_height_mm"]
         resampled_trace = apply_lowpass_filter(resampled_trace, target_sample_spacing_mm)
 
         return Reading(
             meta, trace, resampled_trace, segment_length_mm, target_sample_spacing_mm,
-            evaluation_length_m,
+            alpha, evaluation_length_m, start_mm, end_mm, detect_plates
         )
 
     @classmethod
@@ -103,10 +121,15 @@ class Reading:
         target_sample_spacing_mm: float = 0.5,
         evaluation_length_m: Optional[float] = None,
         parallel: bool = True,
+        alpha: int = 3,
+        start_mm: Optional[float] = None,
+        end_mm: Optional[float] = None,
+        detect_plates: bool = False,
     ):
         meta, trace = load_reading(path, parallel=parallel)
         return cls.from_trace(
-            trace, meta, segment_length_mm, target_sample_spacing_mm, evaluation_length_m,
+            trace, meta, segment_length_mm, target_sample_spacing_mm,
+            evaluation_length_m, alpha, start_mm, end_mm, detect_plates,
         )
 
     @property
@@ -115,48 +138,118 @@ class Reading:
             extract_segment_traces_from_trace(self.trace, self.segment_length_mm),
             extract_segment_traces_from_trace(self.resampled_trace, self.segment_length_mm),
         )
+        segments_ = []
         for ii, (segment_trace, resampled_segment_trace) in enumerate(traces):
+            segment_length = len(resampled_segment_trace) * self.resampled_sample_spacing_mm
+            if segment_length < (0.9 * self.segment_length_mm):
+                continue
+
+            # Apply slope correction if "spot" measurement:
+            resampled_segment_trace["relative_height_mm_no_slope_correction"] = \
+                resampled_segment_trace["relative_height_mm"]
+            if self.evaluation_length_m is None:
+                resampled_segment_trace = apply_slope_correction(resampled_segment_trace)
 
             evaluation_length_position_m = calculate_evaluation_length_position(
                 segment_trace["distance_mm"].min(), self.evaluation_length_m)
-                
-            yield Segment(
+
+            segments_.append(Segment(
                 segment_no=ii,
                 trace=segment_trace,
                 resampled_trace=resampled_segment_trace,
                 segment_length_mm=self.segment_length_mm,
                 resampled_sample_spacing_mm=self.resampled_sample_spacing_mm,
                 evaluation_length_position_m=evaluation_length_position_m,
-            )
+            ))
+        return segments_
 
     def msd(self) -> List[dict]:
         """Mean segment depths (MSD) for the segments making up the profile."""
         return [
             {
+                "segment_no": ss.segment_no,
                 "msd": ss.msd,
+                "valid": ss.is_valid,
                 "evaluation_length_position_m": ss.evaluation_length_position_m,
             }
             for ss in self.segments
         ]
 
-    def mpd(self) -> Union[dict, pd.DataFrame]:
+    def mpd(self, include_meta: bool = False) -> Union[dict, pd.DataFrame]:
         """Mean profile depth (MPD) results for each evaluation length."""
         df = pd.DataFrame.from_records(self.msd())
         results = []
         for distance_m, gg in df.groupby("evaluation_length_position_m", dropna=False):
-            valid_segments = (~gg["msd"].isnull()).sum()
+            valid_segments = gg["valid"].sum()
             valid_segment_ratio = valid_segments / len(gg)
-            results.append(
-                {
-                    "distance_m": distance_m,
-                    "mean": gg["msd"].mean(),
-                    "stdev": gg["msd"].std(),
-                    "valid_segments": valid_segments,
-                    "valid_segment_ratio": valid_segment_ratio,
-                    "is_valid": valid_segment_ratio >= 0.5,
-                }
-            )
+            result = {
+                "distance_m": distance_m,
+                "mean": gg.loc[gg["valid"], "msd"].mean(),
+                "stdev": gg.loc[gg["valid"], "msd"].std(),
+                "valid_segments": valid_segments,
+                "valid_segment_ratio": valid_segment_ratio,
+                "is_valid": valid_segment_ratio >= 0.5,
+            }
+            if include_meta and isinstance(self.meta, dict):
+                result = append_meta(result, self.meta)
+
+            results.append(result)
+
         return results[0] if len(results) == 1 else pd.DataFrame(results)
+
+
+def append_meta(result, meta):
+    for kk, vv in meta.items():
+        result[kk] = vv
+    return result
+
+
+def trim_trace(
+    trace: pd.DataFrame,
+    start_mm: Optional[float] = None,
+    end_mm: Optional[float] = None,
+):
+    if end_mm:
+        trace = trace.loc[trace["distance_mm"] < end_mm]
+
+    if start_mm:
+        trace = trace.loc[trace["distance_mm"] >= start_mm]
+        trace["distance_mm"] -= start_mm
+        trace.reset_index(drop=True, inplace=True)
+    
+    return trace
+
+
+def find_plates(trace: pd.DataFrame):
+    yy = trace["relative_height_mm"].interpolate("pad")
+    is_plate = yy > PLATE_THRESHOLD
+
+    if is_plate.sum() == 0:
+        return None, None
+
+    diff = is_plate.diff()
+    diff.iloc[0] = False
+
+    i_midpoint = int(np.ceil(len(trace) / 2))
+
+    start_mm, end_mm = None, None
+    try:
+        ii_start = trace.loc[:i_midpoint].loc[
+                diff.loc[:i_midpoint]
+            ].iloc[-1].name
+        start_mm = trace.loc[ii_start, "distance_mm"] + PLATE_BUFFER
+    except:
+        pass
+
+    try:
+        ii_end = trace.loc[i_midpoint:].loc[
+                diff.loc[i_midpoint:]
+            ].iloc[0].name - 1
+        end_mm = trace.loc[ii_end, "distance_mm"] - PLATE_BUFFER
+    except:
+        pass
+
+    return start_mm, end_mm
 
 
 def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_length_mm: int):
@@ -213,25 +306,26 @@ def calculate_trace_sample_spacing(trace: pd.DataFrame) -> float:
     return trace["distance_mm"].diff().mean()
 
 
-def apply_spike_removal(trace: pd.DataFrame, alpha: float = 3):
+def append_spike_column(trace: pd.DataFrame, alpha: float = 3):
     threshold = round(alpha * calculate_trace_sample_spacing(trace), 6)
     ss = (trace["relative_height_mm"].diff().abs() >= threshold).to_numpy()[1:]
-
     trace["spike"] = (
         np.insert(ss, 0, False) |  # spikes in forward direction
         np.append(ss, False)  # spikes in reverse direction
     )
-    trace.loc[trace["spike"], "relative_height_mm"] = None
-    trace = apply_dropout_correction(trace)
     return trace
+
+
+def apply_spike_removal(trace: pd.DataFrame, alpha: float = 3):
+    trace = append_spike_column(trace, alpha)
+    trace.loc[trace["spike"], "relative_height_mm"] = None
+    return apply_dropout_correction(trace)
 
 
 def apply_slope_correction(trace: pd.DataFrame):
     p = np.polyfit(trace["distance_mm"], trace["relative_height_mm"], deg=1)
-    slope_correction = pd.Series(
-        trace["distance_mm"] * p[0] + p[1], index=trace.index,
-    )
-    trace["relative_height_mm"] -= slope_correction
+    trace["slope_correction"] = (trace["distance_mm"] * p[0]) + p[1]
+    trace["relative_height_mm"] -= trace["slope_correction"]
     trace["relative_height_mm"] = trace["relative_height_mm"].round(6)
     return trace
 
