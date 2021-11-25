@@ -142,7 +142,7 @@ Please submit an issue if you find a bug or have an idea for an improvement.
 
 ## License
 
-The software is provided under the following MIT license.
+The software is provided under the following license.
 
 *MIT License*
 
