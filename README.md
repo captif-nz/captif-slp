@@ -32,7 +32,7 @@ A new *Reading* object must be created using one of the following class methods.
     )
     ```
 
-    The `meta` keyword argument provides a mechanism for attaching meta data to a *Reading* object. This can be used to including information such as a file name, reading number or measurement date. The data can be accessed later from the *meta* attribute.
+    The `meta` keyword argument provides a mechanism for attaching meta data to a *Reading* object. This can be used to include information such as a file name, reading number or measurement date. The data can be accessed later from the *meta* attribute.
 
 2. Or from a valid *texture* data file capable of being read using the *[captif-data-structures](https://github.com/captif-nz/captif-data-structures)* package (i.e. a CAPTIF in-house file format):
 
