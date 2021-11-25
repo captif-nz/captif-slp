@@ -93,7 +93,7 @@ Used to detect reference plates at the start and/or end of the profile and trim 
 
 #### Accessing the results
 
-Once a profile has been successfully loading into a *Reading* object the following instance methods can be used to access the results.
+Once a profile has been successfully loaded into a *Reading* object the following instance methods can be used to access the results.
 
 `reading.msd()` -- Mean Segment Depth (MSD)
 \
