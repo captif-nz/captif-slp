@@ -118,7 +118,7 @@ Returns either a single dictionary if evaluation length is not set, or a list of
 
 ### Bulk processing
 
-In order to provide efficient processing the Python *multiprocessing* module is used to process batches of valid *texture* data files meeting the CAPTIF in-house SLP file format. The processing function can be imported using `from captif_slp import process_files`.
+In order to provide efficient processing the Python *multiprocessing* module is used to process batches of valid data files meeting the CAPTIF in-house *texture* file format. The processing function can be imported using `from captif_slp import process_files`.
 
 The function takes the path of a folder containing the files to be processed and returns a list of results as per `Reading.mpd(include_meta=True)` with the addition of a `filename` and `folder` field.
 
