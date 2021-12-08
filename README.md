@@ -65,7 +65,7 @@ The keyword arguments have the following meanings:
 
 - `segment_lenght_mm` -- *default: 100*
 \
-Length of the segments (in millimetres) that the profile is split into for processing. Note that this should generally be left as the default value of 100 mm as this is required segment length in ISO 13473-1.
+Length of the segments (in millimetres) that the profile is split into for processing. Note that this should generally be left as the default value of 100 mm as this is the required segment length in ISO 13473-1.
 
 - `target_sample_spacing_mm` -- *default: 0.5*
 \
@@ -112,7 +112,7 @@ Returns either a single dictionary if evaluation length is not set, or a list of
 - `mean` - mean profile depth (average MSD across all valid segments).
 - `stdev` - standard deviation (standard deviation of MSD from all valid segments).
 - `valid_segments` - number of valid segments in the profile.
-- `valid_segment_ratio` - fraction of valid segments in the profile.
+- `proportion_valid_segment` - proportion of valid segments in the profile.
 - `is_valid` - result validity (i.e. whether or not valid_segment_ration >= 0.5).
 - (meta data fields) - the meta data fields if *include_meta* is set to True.
 
