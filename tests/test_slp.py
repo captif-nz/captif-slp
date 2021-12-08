@@ -1,7 +1,7 @@
 
 import pandas as pd
 import numpy as np
-from datetime import date
+from datetime import datetime
 from numpy import nan
 
 from captif_slp.slp import (
@@ -26,7 +26,7 @@ def test_load_reading_4102a5dd(data_path):
     path = data_path.joinpath("4102a5dd.dat")
     meta, trace = load_reading(path)
     assert meta == {
-        "date": date(2019, 1, 16),
+        "datetime": datetime(2019, 1, 16),
         "file_number": 0,
     }
     assert np.array_equal(
