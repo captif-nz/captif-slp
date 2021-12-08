@@ -44,7 +44,7 @@ A new *Reading* object must be created using one of the following class methods.
     )
     ```
 
-    The `parallel` keyword argument allows the file to be read using the multiprocessing module. This can significantly speed up load times for large files. Note that where several files are being processed it is more efficient to pass individual files to each CPU core for processing in which case *parallel* **must be set to False** to allow the multiprocessing module to be used by a higher level function.
+    The `parallel` keyword argument allows the file to be read using the Python *multiprocessing* module. This can significantly speed up load times for large files. Note that where several files are being processed it is more efficient to pass individual files to each CPU core for processing in which case *parallel* **must be set to False** to allow the multiprocessing module to be used by a higher level function.
 
 The remaining keyword arguments are common for `Reading.from_trace()` and `Reading.from_file()`:
 
