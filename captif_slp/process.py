@@ -38,7 +38,7 @@ def _process_files(
     limit_cpu()
     results = {}
     for path in paths:
-        result = Reading.from_file(
+        reading = Reading.from_file(
             path,
             segment_length_mm=segment_length_mm,
             target_sample_spacing_mm=target_sample_spacing_mm,
@@ -48,9 +48,11 @@ def _process_files(
             start_mm=start_mm,
             end_mm=end_mm,
             detect_plates=detect_plates,
-        ).mpd(include_meta=True)
+        )
+        result, trace = reading.result()
+        result["trace"] = trace  # TODO: fix this for when evaluation_length_m is not None
         results[path] = result
-        
+
     return results
 
 
@@ -93,7 +95,7 @@ def process_generic_files(
 
 
 def process_files(
-    path: Union[str, Path]
+    path: Union[str, Path],
 ):
     paths = list(Path(path).glob("*.dat"))
     return process_generic_files(

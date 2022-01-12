@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 from captif_data_structures.readers import TextureReader
 from scipy.signal.signaltools import sosfiltfilt
@@ -196,6 +196,17 @@ class Reading:
             results.append(result)
 
         return results[0] if len(results) == 1 else pd.DataFrame(results)
+
+    def result(self) -> Tuple[Union[dict, pd.DataFrame], List[dict]]:
+        """
+        Returns the Mean profile depth (MPD) results for each evaluation length as either
+        a dict (if no evaluation length) or a DataFrame (if evaluation length provided),
+        and the resampled trace as a list of dicts.
+        """
+        return (
+            self.mpd(include_meta=True),
+            self.resampled_trace[["distance_mm", "relative_height_mm"]].to_dict("records"),
+        )
 
 
 def append_meta(result, meta):
