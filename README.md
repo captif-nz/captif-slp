@@ -109,10 +109,10 @@ Returns a list of dictionaries containing MSD values for each segment (usually 1
 Returns either a single dictionary if evaluation length is not set, or a list of dictionaries if evaluation length is set. The *dict* element(s) have the following keys:
 
 - `distance_m` - evaluation length position (*None* if evaluation length is not set).
-- `mean` - mean profile depth (average MSD across all valid segments).
+- `mpd` - mean profile depth (average MSD across all valid segments).
 - `stdev` - standard deviation (standard deviation of MSD from all valid segments).
 - `valid_segments` - number of valid segments in the profile.
-- `proportion_valid_segment` - proportion of valid segments in the profile.
+- `proportion_valid_segments` - proportion of valid segments in the profile.
 - `is_valid` - result validity (i.e. whether or not valid_segment_ration >= 0.5).
 - (meta data fields) - the meta data fields if *include_meta* is set to True.
 

@@ -24,7 +24,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile2(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj02.mm")
@@ -34,7 +34,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile3(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj03.mm")
@@ -44,7 +44,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.0015
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.0015
 
     def test_profile4(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj04.mm")
@@ -54,7 +54,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile5(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj05.mm")
@@ -64,7 +64,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile6(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj06.mm")
@@ -74,7 +74,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile7(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj07.mm")
@@ -84,7 +84,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile8_long_target_sample_spacing(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj08.mm")
@@ -94,7 +94,7 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
 
     def test_profile8_short_target_sample_spacing(self, data_path):
         path = data_path.joinpath("erpug_profiles", "obj08.mm")
@@ -104,4 +104,4 @@ class TestReferenceProfiles:
             path, target_sample_spacing_mm=0.5, evaluation_length_m=20,
         )
         results = reading.mpd()
-        assert abs(1 - (results["mean"].mean() / mpd_target)) <= 0.001
+        assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001

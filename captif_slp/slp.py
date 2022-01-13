@@ -181,14 +181,14 @@ class Reading:
         results = []
         for distance_m, gg in df.groupby("evaluation_length_position_m", dropna=False):
             valid_segments = gg["valid"].sum()
-            proportion_valid_segment = valid_segments / len(gg)
+            proportion_valid_segments = valid_segments / len(gg)
             result = {
                 "distance_m": distance_m,
-                "mean": gg.loc[gg["valid"], "msd"].mean(),
+                "mpd": gg.loc[gg["valid"], "msd"].mean(),
                 "stdev": gg.loc[gg["valid"], "msd"].std(),
                 "valid_segments": valid_segments,
-                "proportion_valid_segment": proportion_valid_segment,
-                "is_valid": proportion_valid_segment >= 0.5,
+                "proportion_valid_segments": proportion_valid_segments,
+                "is_valid": proportion_valid_segments >= 0.5,
             }
             if include_meta and isinstance(self.meta, dict):
                 result = append_meta(result, self.meta)

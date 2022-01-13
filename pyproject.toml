@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "captif-slp"
-version = "0.6"
+version = "0.7"
 description = ""
 authors = ["John Bull"]
 homepage = "https://github.com/captif-nz/captif-slp"
