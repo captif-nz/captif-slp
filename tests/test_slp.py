@@ -293,5 +293,3 @@ class TestSegment:
 
     def test_is_valid(self):
         pass
-
-

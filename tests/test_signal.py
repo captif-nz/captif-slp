@@ -28,4 +28,3 @@ def test_build_lowpass_filter_sos_3db_down_point():
     highcut_wavelength = 1 / freq[magnitude <= np.sqrt(0.5)][0]
 
     assert abs(1 - (highcut_wavelength / 2.4)) <= 0.005  # check within 0.5% of target
-
