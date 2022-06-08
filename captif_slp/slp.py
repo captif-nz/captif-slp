@@ -295,13 +295,13 @@ def find_plates(trace: pd.DataFrame):
     try:
         ii_start = trace.loc[:i_midpoint].loc[diff.loc[:i_midpoint]].iloc[-1].name
         start_mm = trace.loc[ii_start, "distance_mm"] + PLATE_BUFFER
-    except:
+    except Exception:
         pass
 
     try:
         ii_end = trace.loc[i_midpoint:].loc[diff.loc[i_midpoint:]].iloc[0].name - 1
         end_mm = trace.loc[ii_end, "distance_mm"] - PLATE_BUFFER
-    except:
+    except Exception:
         pass
 
     return start_mm, end_mm

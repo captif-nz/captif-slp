@@ -2,8 +2,6 @@ import os
 import psutil
 import multiprocessing
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
 from pathlib import Path
 from platform import system
 from typing import List, Optional, Union
@@ -70,7 +68,7 @@ def process_generic_files(
 ):
     try:
         paths = [pp.as_posix() for pp in paths]
-    except:
+    except Exception:
         pass
 
     tasks = [
