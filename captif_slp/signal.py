@@ -1,4 +1,3 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -50,18 +49,20 @@ def plot_filter_response(sos: np.array, fs: float):
 
     fig, ax = plt.subplots()
     ax.plot((fs * 0.5 / np.pi) * w, abs(h))
-    ax.plot([0, 0.5 * fs], [np.sqrt(0.5), np.sqrt(0.5)], '--', label='sqrt(0.5)')
+    ax.plot([0, 0.5 * fs], [np.sqrt(0.5), np.sqrt(0.5)], "--", label="sqrt(0.5)")
 
-    ax.set_xlabel('Frequency (mm-1)')
-    ax.set_ylabel('Gain')
+    ax.set_xlabel("Frequency (mm-1)")
+    ax.set_ylabel("Gain")
     ax.grid(True)
-    ax.legend(loc='best')
+    ax.legend(loc="best")
 
     return fig, ax
 
 
 def generate_ba_filter_coefficients(
-    filter_type, sample_spacing_mm, normalise=True,
+    filter_type,
+    sample_spacing_mm,
+    normalise=True,
 ):
     if filter_type == "lowpass":
         b, a = build_lowpass_filter(sample_spacing_mm, "ba")
@@ -69,8 +70,8 @@ def generate_ba_filter_coefficients(
         b, a = build_highpass_filter(sample_spacing_mm, "ba")
 
     if normalise:
-        a = a/b[0]
-        b = b/b[0]
+        a = a / b[0]
+        b = b / b[0]
 
     return b, a
 
@@ -80,12 +81,16 @@ def generate_reference_filter_coefficients(normalise=True):
     for filter_type in ["lowpass", "highpass"]:
         for sample_spacing_mm in [0.5, 1]:
             b, a = generate_ba_filter_coefficients(
-                filter_type, sample_spacing_mm, normalise,
+                filter_type,
+                sample_spacing_mm,
+                normalise,
             )
-            filter_coefficients.append({
-                "filter_type": filter_type,
-                "sample_spacing_mm": sample_spacing_mm,
-                "b": b.tolist(),
-                "a": a.tolist(),
-            })
+            filter_coefficients.append(
+                {
+                    "filter_type": filter_type,
+                    "sample_spacing_mm": sample_spacing_mm,
+                    "b": b.tolist(),
+                    "a": a.tolist(),
+                }
+            )
     return filter_coefficients

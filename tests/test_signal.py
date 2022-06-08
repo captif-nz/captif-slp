@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.signal import sosfreqz
 
@@ -16,13 +15,13 @@ def test_build_lowpass_filter_check_coefficients():
             1.0,
             -0.30756635979220975,
             0.18834516088404465,
-        ]
+        ],
     )
 
 
 def test_build_lowpass_filter_sos_3db_down_point():
     sos = signal.build_lowpass_filter(0.5)
-    freq, h = sosfreqz(sos, fs=1/0.5)
+    freq, h = sosfreqz(sos, fs=1 / 0.5)
     magnitude = abs(h)
 
     highcut_wavelength = 1 / freq[magnitude <= np.sqrt(0.5)][0]

@@ -1,4 +1,3 @@
-
 import pytest
 
 from captif_slp import Reading
@@ -21,7 +20,9 @@ class TestReferenceProfiles:
         mpd_target = 2.486563
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -31,7 +32,9 @@ class TestReferenceProfiles:
         mpd_target = 0.739969
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -41,7 +44,9 @@ class TestReferenceProfiles:
         mpd_target = 1.688548
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.0015
@@ -51,7 +56,9 @@ class TestReferenceProfiles:
         mpd_target = 1.178962
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -61,7 +68,9 @@ class TestReferenceProfiles:
         mpd_target = 0.649049
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -71,7 +80,9 @@ class TestReferenceProfiles:
         mpd_target = 0.417096
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -81,7 +92,9 @@ class TestReferenceProfiles:
         mpd_target = 1.314730
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -91,7 +104,9 @@ class TestReferenceProfiles:
         mpd_target = 0.806073
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=1.0, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=1.0,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001
@@ -101,7 +116,9 @@ class TestReferenceProfiles:
         mpd_target = 0.818080
 
         reading = Reading.from_file(
-            path, target_sample_spacing_mm=0.5, evaluation_length_m=20,
+            path,
+            target_sample_spacing_mm=0.5,
+            evaluation_length_m=20,
         )
         results = reading.mpd()
         assert abs(1 - (results["mpd"].mean() / mpd_target)) <= 0.001

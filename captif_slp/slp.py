@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
@@ -103,15 +102,25 @@ class Reading:
 
         resampled_trace = build_resampled_trace(trace, target_sample_spacing_mm)
 
-        resampled_trace["relative_height_mm_no_spike_correction"] = resampled_trace["relative_height_mm"]
+        resampled_trace["relative_height_mm_no_spike_correction"] = resampled_trace[
+            "relative_height_mm"
+        ]
         resampled_trace = apply_spike_removal(resampled_trace, alpha=alpha)
 
-        resampled_trace["relative_height_mm_no_highpass_filter"] = resampled_trace["relative_height_mm"]
+        resampled_trace["relative_height_mm_no_highpass_filter"] = resampled_trace[
+            "relative_height_mm"
+        ]
         if evaluation_length_m is not None:
-            resampled_trace = apply_highpass_filter(resampled_trace, target_sample_spacing_mm)
+            resampled_trace = apply_highpass_filter(
+                resampled_trace, target_sample_spacing_mm
+            )
 
-        resampled_trace["relative_height_mm_no_lowpass_filter"] = resampled_trace["relative_height_mm"]
-        resampled_trace = apply_lowpass_filter(resampled_trace, target_sample_spacing_mm)
+        resampled_trace["relative_height_mm_no_lowpass_filter"] = resampled_trace[
+            "relative_height_mm"
+        ]
+        resampled_trace = apply_lowpass_filter(
+            resampled_trace, target_sample_spacing_mm
+        )
 
         return Reading(
             meta=meta,
@@ -165,29 +174,39 @@ class Reading:
         )
 
         segments_ = []
-        for ii, (segment_trace, resampled_segment_trace, segment_length_mm) in enumerate(segment_data):
+        for ii, (
+            segment_trace,
+            resampled_segment_trace,
+            segment_length_mm,
+        ) in enumerate(segment_data):
             n_points = len(resampled_segment_trace)
             max_points = segment_length_mm / self.resampled_sample_spacing_mm
             if (n_points / max_points) < 0.9:
                 continue
 
             # Apply slope correction if "spot" measurement:
-            resampled_segment_trace["relative_height_mm_no_slope_correction"] = \
-                resampled_segment_trace["relative_height_mm"]
+            resampled_segment_trace[
+                "relative_height_mm_no_slope_correction"
+            ] = resampled_segment_trace["relative_height_mm"]
             if self.evaluation_length_m is None:
-                resampled_segment_trace = apply_slope_correction(resampled_segment_trace)
+                resampled_segment_trace = apply_slope_correction(
+                    resampled_segment_trace
+                )
 
             evaluation_length_position_m = calculate_evaluation_length_position(
-                segment_trace["distance_mm"].min(), self.evaluation_length_m)
+                segment_trace["distance_mm"].min(), self.evaluation_length_m
+            )
 
-            segments_.append(Segment(
-                segment_no=ii,
-                trace=segment_trace,
-                resampled_trace=resampled_segment_trace,
-                segment_length_mm=segment_length_mm,
-                resampled_sample_spacing_mm=self.resampled_sample_spacing_mm,
-                evaluation_length_position_m=evaluation_length_position_m,
-            ))
+            segments_.append(
+                Segment(
+                    segment_no=ii,
+                    trace=segment_trace,
+                    resampled_trace=resampled_segment_trace,
+                    segment_length_mm=segment_length_mm,
+                    resampled_sample_spacing_mm=self.resampled_sample_spacing_mm,
+                    evaluation_length_position_m=evaluation_length_position_m,
+                )
+            )
         return segments_
 
     def msd(self) -> List[dict]:
@@ -232,7 +251,9 @@ class Reading:
         """
         return (
             self.mpd(include_meta=True),
-            self.resampled_trace[["distance_mm", "relative_height_mm"]].to_dict("records"),
+            self.resampled_trace[["distance_mm", "relative_height_mm"]].to_dict(
+                "records"
+            ),
         )
 
 
@@ -254,7 +275,7 @@ def trim_trace(
         trace = trace.loc[trace["distance_mm"] >= start_mm]
         trace["distance_mm"] -= start_mm
         trace.reset_index(drop=True, inplace=True)
-    
+
     return trace
 
 
@@ -272,17 +293,13 @@ def find_plates(trace: pd.DataFrame):
 
     start_mm, end_mm = None, None
     try:
-        ii_start = trace.loc[:i_midpoint].loc[
-                diff.loc[:i_midpoint]
-            ].iloc[-1].name
+        ii_start = trace.loc[:i_midpoint].loc[diff.loc[:i_midpoint]].iloc[-1].name
         start_mm = trace.loc[ii_start, "distance_mm"] + PLATE_BUFFER
     except:
         pass
 
     try:
-        ii_end = trace.loc[i_midpoint:].loc[
-                diff.loc[i_midpoint:]
-            ].iloc[0].name - 1
+        ii_end = trace.loc[i_midpoint:].loc[diff.loc[i_midpoint:]].iloc[0].name - 1
         end_mm = trace.loc[ii_end, "distance_mm"] - PLATE_BUFFER
     except:
         pass
@@ -292,7 +309,8 @@ def find_plates(trace: pd.DataFrame):
 
 def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_bins: list):
     yield from (
-        tt for _, tt in trace.groupby(
+        tt
+        for _, tt in trace.groupby(
             pd.cut(trace["distance_mm"], segment_bins, include_lowest=True)
         )
     )
@@ -340,7 +358,9 @@ def build_resampled_trace(trace: pd.DataFrame, target_sample_spacing_mm: float):
     resampled_trace.reset_index(drop=True, inplace=True)
     trace.drop(columns=["group"], inplace=True)
 
-    resampled_trace["relative_height_mm"] = resampled_trace["relative_height_mm"].round(6)
+    resampled_trace["relative_height_mm"] = resampled_trace["relative_height_mm"].round(
+        6
+    )
     return resampled_trace
 
 
@@ -371,10 +391,9 @@ def calculate_trace_sample_spacing(trace: pd.DataFrame) -> float:
 def append_spike_column(trace: pd.DataFrame, alpha: float = 3):
     threshold = round(alpha * calculate_trace_sample_spacing(trace), 6)
     ss = (trace["relative_height_mm"].diff().abs() >= threshold).to_numpy()[1:]
-    trace["spike"] = (
-        np.insert(ss, 0, False) |  # spikes in forward direction
-        np.append(ss, False)  # spikes in reverse direction
-    )
+    trace["spike"] = np.insert(ss, 0, False) | np.append(  # spikes in forward direction
+        ss, False
+    )  # spikes in reverse direction
     return trace
 
 
@@ -410,19 +429,21 @@ def dropout_correction_start_end(trace: pd.DataFrame):
 
     # Fill start of trace if it contains dropouts:
     if np.isnan(yy.iloc[0]):
-        yy.loc[:valid_index[0]] = yy.loc[valid_index[0]]
+        yy.loc[: valid_index[0]] = yy.loc[valid_index[0]]
 
     # Fill end of trace if it contains dropouts:
     if np.isnan(yy.iloc[-1]):
-        yy.loc[valid_index[-1]:] = yy.loc[valid_index[-1]]
+        yy.loc[valid_index[-1] :] = yy.loc[valid_index[-1]]
 
     trace["relative_height_mm"] = yy
     return trace
 
 
 def dropout_correction_interpolate(trace: pd.DataFrame):
-    return (trace
-        .set_index("distance_mm", drop=True)  # so distance weighing can be used in interpolation
+    return (
+        trace.set_index(
+            "distance_mm", drop=True
+        )  # so distance weighing can be used in interpolation
         .interpolate(method="index", limit_area="inside")
         .reset_index(drop=False)  # move distance back to a column
     )
@@ -439,11 +460,12 @@ def calculate_msd(trace: pd.DataFrame) -> float:
 
 
 def calculate_evaluation_length_position(
-    segment_start_position_mm: float,
-    evaluation_length_m: Optional[float] = None
+    segment_start_position_mm: float, evaluation_length_m: Optional[float] = None
 ) -> float:
     if evaluation_length_m is None:
         return None
 
-    position_no = int(np.floor(segment_start_position_mm / (evaluation_length_m * 1000)))
+    position_no = int(
+        np.floor(segment_start_position_mm / (evaluation_length_m * 1000))
+    )
     return (position_no + 1) * evaluation_length_m

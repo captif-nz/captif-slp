@@ -50,7 +50,9 @@ def _process_files(
             detect_plates=detect_plates,
         )
         result, trace = reading.result()
-        result["trace"] = trace  # TODO: fix this for when evaluation_length_m is not None
+        result[
+            "trace"
+        ] = trace  # TODO: fix this for when evaluation_length_m is not None
         results[path] = result
 
     return results
@@ -81,7 +83,8 @@ def process_generic_files(
             start_mm=start_mm,
             end_mm=end_mm,
             detect_plates=detect_plates,
-        ) for pp in np.array_split(paths, CPU_COUNT)
+        )
+        for pp in np.array_split(paths, CPU_COUNT)
     ]
     results = [tt.result() for tt in tasks]
     results = {kk: vv for rr in results for kk, vv in rr.items()}
