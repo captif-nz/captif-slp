@@ -66,13 +66,14 @@ class Reading:
     meta: Optional[dict]
     trace: pd.DataFrame
     resampled_trace: pd.DataFrame
-    segment_length_mm: int
     resampled_sample_spacing_mm: float
     alpha: int
-    evaluation_length_m: Optional[float] = None,
-    start_mm: Optional[float] = None,
-    end_mm: Optional[float] = None,
-    detect_plates: bool = False,
+    segment_length_mm: Optional[int] = None
+    segment_bins: Optional[list] = None
+    evaluation_length_m: Optional[float] = None
+    start_mm: Optional[float] = None
+    end_mm: Optional[float] = None
+    detect_plates: bool = False
 
     @classmethod
     def from_trace(
@@ -80,6 +81,7 @@ class Reading:
         trace,
         meta=None,
         segment_length_mm: int = 100,
+        segment_bins: Optional[list] = None,
         target_sample_spacing_mm: float = 0.5,
         evaluation_length_m: Optional[float] = None,
         alpha: int = 3,
@@ -87,6 +89,9 @@ class Reading:
         end_mm: Optional[float] = None,
         detect_plates: bool = False,
     ):
+        if segment_bins is not None:
+            segment_length_mm = None
+
         if detect_plates and (start_mm is None) and (end_mm is None):
             start_mm, end_mm = find_plates(trace)
 
@@ -109,8 +114,17 @@ class Reading:
         resampled_trace = apply_lowpass_filter(resampled_trace, target_sample_spacing_mm)
 
         return Reading(
-            meta, trace, resampled_trace, segment_length_mm, target_sample_spacing_mm,
-            alpha, evaluation_length_m, start_mm, end_mm, detect_plates
+            meta=meta,
+            trace=trace,
+            resampled_trace=resampled_trace,
+            resampled_sample_spacing_mm=target_sample_spacing_mm,
+            alpha=alpha,
+            segment_length_mm=segment_length_mm,
+            segment_bins=segment_bins,
+            evaluation_length_m=evaluation_length_m,
+            start_mm=start_mm,
+            end_mm=end_mm,
+            detect_plates=detect_plates,
         )
 
     @classmethod
@@ -118,6 +132,7 @@ class Reading:
         cls,
         path: Union[str, Path],
         segment_length_mm: int = 100,
+        segment_bins: Optional[list] = None,
         target_sample_spacing_mm: float = 0.5,
         evaluation_length_m: Optional[float] = None,
         parallel: bool = True,
@@ -128,20 +143,32 @@ class Reading:
     ):
         meta, trace = load_reading(path, parallel=parallel)
         return cls.from_trace(
-            trace, meta, segment_length_mm, target_sample_spacing_mm,
-            evaluation_length_m, alpha, start_mm, end_mm, detect_plates,
+            trace=trace,
+            meta=meta,
+            segment_length_mm=segment_length_mm,
+            segment_bins=segment_bins,
+            target_sample_spacing_mm=target_sample_spacing_mm,
+            evaluation_length_m=evaluation_length_m,
+            alpha=alpha,
+            start_mm=start_mm,
+            end_mm=end_mm,
+            detect_plates=detect_plates,
         )
 
     @property
     def segments(self):
-        traces = zip(
-            extract_segment_traces_from_trace(self.trace, self.segment_length_mm),
-            extract_segment_traces_from_trace(self.resampled_trace, self.segment_length_mm),
+        segment_data = extract_segment_data(
+            trace=self.trace,
+            resampled_trace=self.resampled_trace,
+            segment_length_mm=self.segment_length_mm,
+            segment_bins=self.segment_bins,
         )
+
         segments_ = []
-        for ii, (segment_trace, resampled_segment_trace) in enumerate(traces):
-            segment_length = len(resampled_segment_trace) * self.resampled_sample_spacing_mm
-            if segment_length < (0.9 * self.segment_length_mm):
+        for ii, (segment_trace, resampled_segment_trace, segment_length_mm) in enumerate(segment_data):
+            n_points = len(resampled_segment_trace)
+            max_points = segment_length_mm / self.resampled_sample_spacing_mm
+            if (n_points / max_points) < 0.9:
                 continue
 
             # Apply slope correction if "spot" measurement:
@@ -157,7 +184,7 @@ class Reading:
                 segment_no=ii,
                 trace=segment_trace,
                 resampled_trace=resampled_segment_trace,
-                segment_length_mm=self.segment_length_mm,
+                segment_length_mm=segment_length_mm,
                 resampled_sample_spacing_mm=self.resampled_sample_spacing_mm,
                 evaluation_length_position_m=evaluation_length_position_m,
             ))
@@ -263,12 +290,36 @@ def find_plates(trace: pd.DataFrame):
     return start_mm, end_mm
 
 
-def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_length_mm: int):
-    bins = generate_trace_bins(trace, segment_length_mm)
+def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_bins: list):
     yield from (
         tt for _, tt in trace.groupby(
-            pd.cut(trace["distance_mm"], bins, include_lowest=True)
+            pd.cut(trace["distance_mm"], segment_bins, include_lowest=True)
         )
+    )
+
+
+def extract_segment_data(
+    trace: pd.DataFrame,
+    resampled_trace: pd.DataFrame,
+    segment_length_mm: Optional[int] = None,
+    segment_bins: Optional[list] = None,
+):
+    """
+    Extracts segment traces (original and resampled) from the reading and calculated the
+    resulting segment length of each segment. The segment data is zipped with each
+    element containing (trace, resampled_trace, segment_length_mm) for one segment.
+
+    """
+    if segment_bins is None and segment_length_mm is None:
+        raise ValueError("at least one of segment_length_m or segment_bins must be set")
+
+    if segment_bins is None:
+        segment_bins = generate_trace_bins(trace, segment_length_mm)
+
+    return zip(
+        extract_segment_traces_from_trace(trace, segment_bins),
+        extract_segment_traces_from_trace(resampled_trace, segment_bins),
+        np.diff(segment_bins),  # segment_length_m of each segment
     )
 
 

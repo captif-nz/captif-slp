@@ -12,6 +12,7 @@ from captif_slp.slp import (
     build_resampled_trace,
     calculate_msd,
     calculate_trace_sample_spacing,
+    extract_segment_data,
     extract_segment_traces_from_trace,
     find_plates,
     load_reading,
@@ -153,12 +154,43 @@ def test_extract_segment_traces_from_trace():
         "distance_mm": [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500],
         "relative_height_mm": [0.3, 0.1, 0.2, 0.2, 0.1, 0.2, 0.1, -0.1, 0.1, 0.1, 0.5],
     })
-    segment_traces = list(extract_segment_traces_from_trace(trace, segment_length_mm=100))
+    segment_bins = [0, 100, 200, 300, 400, 500]
+    segment_traces = list(extract_segment_traces_from_trace(trace, segment_bins))
 
     assert len(segment_traces) == 5
     assert [len(tt) for tt in segment_traces] == [3, 2, 2, 2, 2]
     assert np.array_equal(segment_traces[1]["distance_mm"], [150, 200])
     assert np.array_equal(segment_traces[1]["relative_height_mm"], [0.2, 0.1])
+
+
+def test_extract_segment_data_segment_length():
+    trace = pd.DataFrame({
+        "distance_mm": [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5],
+        "relative_height_mm": [0.3, 0.1, 0.2, 0.2, 0.1, 0.2, 0.1, -0.1, 0.1, 0.1, 0.5],
+    })
+    resampled_trace = pd.DataFrame({
+        "distance_mm":  [0.5, 1, 1.5, 2, 2.5],
+        "relative_height_mm": [0.2, 0.15, 0.15, 0, 0.3],
+    })
+    trace_data = list(extract_segment_data(trace, resampled_trace, segment_length_mm=1))
+
+    assert len(trace_data) == 3
+    assert list(zip(*trace_data))[2] == (1, 1, 1)
+
+
+def test_extract_segment_data_segment_bins():
+    trace = pd.DataFrame({
+        "distance_mm": [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5],
+        "relative_height_mm": [0.3, 0.1, 0.2, 0.2, 0.1, 0.2, 0.1, -0.1, 0.1, 0.1, 0.5],
+    })
+    resampled_trace = pd.DataFrame({
+        "distance_mm":  [0.5, 1, 1.5, 2, 2.5],
+        "relative_height_mm": [0.2, 0.15, 0.15, 0, 0.3],
+    })
+    trace_data = list(extract_segment_data(trace, resampled_trace, segment_bins=[0, 1, 2, 3]))
+
+    assert len(trace_data) == 3
+    assert list(zip(*trace_data))[2] == (1, 1, 1)
 
 
 def test_apply_slope_correction():
@@ -226,6 +258,19 @@ class TestReading:
 
         pd.testing.assert_frame_equal(reading.trace, trace, check_dtype=False)
         assert len(reading.resampled_trace) == 20
+
+    def test_from_trace_using_segment_bins(self):
+        trace = pd.DataFrame({
+            "distance_mm": np.arange(0, 10, 0.25),
+            "relative_height_mm": [0.1] * 40,
+        })
+        reading = Reading.from_trace(trace, segment_bins=np.arange(0, 10, 1))
+
+        assert reading.segment_length_mm is None
+        assert np.array_equal(reading.segment_bins, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+        assert len(reading.segments) == 9
+        assert all((ss.segment_length_mm == 1 for ss in reading.segments))
+
 
     def test_from_file_4102a5dd(self):
         pass
