@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
 from captif_data_structures.readers import TextureReader
-from scipy.signal.signaltools import sosfiltfilt
+from scipy.signal import sosfiltfilt
 
 from .signal import build_highpass_filter, build_lowpass_filter
 
