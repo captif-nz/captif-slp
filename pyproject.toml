@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "captif-slp"
-version = "0.9"
+version = "0.10"
 description = ""
 authors = ["John Bull"]
 homepage = "https://github.com/captif-nz/captif-slp"
@@ -11,7 +11,7 @@ keywords = ["CAPTIF"]
 [tool.poetry.dependencies]
 python = ">=3.8,<3.10"
 pandas = "^1.3.3"
-captif-data-structures = "^0.12"
+captif-data-structures = ">=0.12"
 click = "^8.0.1"
 pydantic = "^1.8.2"
 scipy = "^1.7.1"
