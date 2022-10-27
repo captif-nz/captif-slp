@@ -3,11 +3,10 @@ import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
-
-from captif_data_structures.readers import TextureReader
 from scipy.signal import sosfiltfilt
 
 from .signal import build_highpass_filter, build_lowpass_filter
+from .structures import FileStructure
 
 
 PLATE_THRESHOLD = 30  # Height values above PLATE_THRESHOLD are treated as a plate.
@@ -365,7 +364,7 @@ def build_resampled_trace(trace: pd.DataFrame, target_sample_spacing_mm: float):
 
 
 def load_reading(path: Union[str, Path], parallel: bool = True):
-    meta, table_rows, _ = TextureReader.load(path, parallel=parallel)
+    meta, table_rows, _ = FileStructure.read(path, parallel=parallel)
     trace = pd.DataFrame(table_rows).sort_values("distance_mm").reset_index(drop=True)
     return meta, trace
 

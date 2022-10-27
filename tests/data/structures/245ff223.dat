@@ -1,0 +1,14 @@
+Road Name	CAPTIF	
+Ref Station	0	
+Start Pos (m)	0	
+End Pos (m)	0	
+Direction	increasing	
+Wheel Path	Left	
+Date	29/09/2021	
+File No.	1	
+Current Pos	1.8	
+*****DATA*****		
+Data Point No:	Distance (mm)	Depth (mm)
+1.000	0.000	-2.232
+2.000	0.037	NaN
+3.000	0.075	-2.090

@@ -23,7 +23,7 @@ from captif_slp.slp import (
 
 
 def test_load_reading_4102a5dd(data_path):
-    path = data_path.joinpath("4102a5dd.dat")
+    path = data_path.joinpath("structures", "4102a5dd.dat")
     meta, trace = load_reading(path)
     assert meta == {
         "datetime": datetime(2019, 1, 16),
