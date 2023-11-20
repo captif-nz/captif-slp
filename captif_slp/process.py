@@ -1,4 +1,6 @@
+import csv
 import os
+import pandas as pd
 import psutil
 import multiprocessing
 import numpy as np
@@ -107,3 +109,52 @@ def process_files(
         alpha=6,
         detect_plates=True,
     )
+
+
+def read_traces_from_transverse_file(path):
+    timestamps, traces = [], []
+    with open(path, 'r') as f:
+        reader = csv.reader(f)
+        trace = {}
+        for i, row in enumerate(reader):
+            timestamps.append(row[0])
+            row = row[1:]  # drop timestamp
+            if i % 2 == 0:
+                trace['distance_mm'] = [float(val) for val in row]
+            else:
+                trace['relative_height_mm'] = [float(val) for val in row]
+                traces.append(trace)
+                trace = {}
+    return timestamps, [pd.DataFrame(tt) for tt in traces]
+
+
+def process_transverse_file(
+    path: Union[str, Path],
+    segment_length_mm: int = 100,
+    target_sample_spacing_mm: float = 0.5,
+    evaluation_length_m: Optional[float] = None,
+    alpha: int = 3,
+    start_mm: Optional[float] = -50,
+    end_mm: Optional[float] = 50,
+    detect_plates: bool = False,
+):
+
+    timestamps, traces = read_traces_from_transverse_file(path)
+
+    results = []
+    for timestamp, trace in zip(timestamps, traces):
+        reading = Reading.from_trace(
+            trace,
+            segment_length_mm=segment_length_mm,
+            target_sample_spacing_mm=target_sample_spacing_mm,
+            evaluation_length_m=evaluation_length_m,
+            alpha=alpha,
+            start_mm=start_mm,
+            end_mm=end_mm,
+            detect_plates=detect_plates,
+        )
+        result, trace = reading.result()
+        result["timestamp"] = timestamp
+        results.append(result)
+
+    return results
