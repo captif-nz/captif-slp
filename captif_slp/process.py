@@ -154,6 +154,7 @@ def process_transverse_file(
             detect_plates=detect_plates,
         )
         result, trace = reading.result()
+        result["trace"] = trace
         result["timestamp"] = timestamp
         results.append(result)
 

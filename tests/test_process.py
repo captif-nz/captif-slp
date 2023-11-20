@@ -30,5 +30,5 @@ def test_process_transverse_file(data_path):
     )
 
     assert len(results) == 9
-    for cc in ["timestamp","mpd", "stdev", "valid_segments", "proportion_valid_segments", "is_valid"]:
+    for cc in ["timestamp","mpd", "stdev", "valid_segments", "proportion_valid_segments", "is_valid", "trace"]:
         assert cc in results.columns
