@@ -117,7 +117,7 @@ def read_traces_from_transverse_file(path):
         reader = csv.reader(f)
         trace = {}
         for i, row in enumerate(reader):
-            timestamps.append(row[0])
+            # timestamps.append(row[0])
             row = row[1:]  # drop timestamp
             if i % 2 == 0:
                 trace['distance_mm'] = [float(val) for val in row]
@@ -129,6 +129,7 @@ def read_traces_from_transverse_file(path):
                 # trace['relative_height_mm'] = [float(val) for val in row]
                 trace['relative_height_mm'] = temp_trace
                 traces.append(trace)
+                timestamps.append(row[0])
                 trace = {}
     return timestamps, [pd.DataFrame(tt) for tt in traces]
 
