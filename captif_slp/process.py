@@ -122,7 +122,12 @@ def read_traces_from_transverse_file(path):
             if i % 2 == 0:
                 trace['distance_mm'] = [float(val) for val in row]
             else:
-                trace['relative_height_mm'] = [float(val) for val in row]
+                temp_trace = [float(val) for val in row]
+                # Check if all elements in temp_trace are NaN
+                if all(np.isnan(temp_trace)):
+                    continue
+                # trace['relative_height_mm'] = [float(val) for val in row]
+                trace['relative_height_mm'] = temp_trace
                 traces.append(trace)
                 trace = {}
     return timestamps, [pd.DataFrame(tt) for tt in traces]
