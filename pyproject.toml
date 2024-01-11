@@ -17,6 +17,7 @@ scipy = "^1.7.1"
 matplotlib = "^3.4.3"
 psutil = "^5.8.0"
 pyrsona = "^0.5"
+rich = "^13.7.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

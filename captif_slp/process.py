@@ -8,6 +8,10 @@ from pathlib import Path
 from platform import system
 from typing import List, Optional, Union
 from unsync import unsync
+import  json
+
+from dataclasses import dataclass
+from rich.live import Live
 
 from .slp import Reading
 
@@ -15,6 +19,16 @@ from .slp import Reading
 CPU_COUNT = multiprocessing.cpu_count()
 OS = system()
 
+@dataclass
+class CountMonitoring:
+    total_samples: int = None
+    current_sample: int = None
+
+    def __repr__(self):
+        return (
+            f"Total sample count: {self.total_samples}\n"
+            f"Current sample being processed: {self.current_sample}\n"
+            f"Percentage complete: {self.current_sample/self.total_samples*100:.2f}%")
 
 def limit_cpu():
     p = psutil.Process(os.getpid())
@@ -111,27 +125,29 @@ def process_files(
     )
 
 
-def read_traces_from_transverse_file(path):
-    timestamps, traces = [], []
-    with open(path, 'r') as f:
-        reader = csv.reader(f)
-        trace = {}
-        for i, row in enumerate(reader):
-            # timestamps.append(row[0])
-            row = row[1:]  # drop timestamp
-            if i % 2 == 0:
-                trace['distance_mm'] = [float(val) for val in row]
-            else:
-                temp_trace = [float(val) for val in row]
-                # Check if all elements in temp_trace are NaN
-                if all(np.isnan(temp_trace)):
-                    continue
-                # trace['relative_height_mm'] = [float(val) for val in row]
-                trace['relative_height_mm'] = temp_trace
-                traces.append(trace)
-                timestamps.append(row[0])
-                trace = {}
-    return timestamps, [pd.DataFrame(tt) for tt in traces]
+# def read_traces_from_transverse_file(path):
+#     timestamps, traces = [], []
+#     with open(path, 'r') as f:
+#         reader = csv.reader(f)
+#         trace = {}
+#         for i, row in enumerate(reader):
+#             # timestamps.append(row[0])
+#             temp_timestamp = row[0]
+#             row = row[1:]  # drop timestamp
+#             if i % 2 == 0:
+#                 trace['distance_mm'] = [float(val) for val in row]
+#                 # timestamps.append(temp_timestamp)
+#             else:
+#                 temp_trace = [float(val) for val in row]
+#                 # Check if all elements in temp_trace are NaN
+#                 if not all(np.isnan(temp_trace)):
+#                         # continue
+#                     # trace['relative_height_mm'] = [float(val) for val in row]
+#                     trace['relative_height_mm'] = temp_trace
+#                     traces.append(trace)
+#                     timestamps.append(temp_timestamp)
+#                     trace = {}
+#     return timestamps, [pd.DataFrame(tt) for tt in traces]
 
 
 def process_transverse_file(
@@ -140,28 +156,84 @@ def process_transverse_file(
     target_sample_spacing_mm: float = 0.5,
     evaluation_length_m: Optional[float] = None,
     alpha: int = 3,
-    start_mm: Optional[float] = -50,
-    end_mm: Optional[float] = 50,
+    start_mm: Optional[float] = -75, #-50, Change to -75
+    end_mm: Optional[float] = 75, # 50, Change to 75
     detect_plates: bool = False,
 ):
 
     timestamps, traces = read_traces_from_transverse_file(path)
 
     results = []
-    for timestamp, trace in zip(timestamps, traces):
-        reading = Reading.from_trace(
-            trace,
-            segment_length_mm=segment_length_mm,
-            target_sample_spacing_mm=target_sample_spacing_mm,
-            evaluation_length_m=evaluation_length_m,
-            alpha=alpha,
-            start_mm=start_mm,
-            end_mm=end_mm,
-            detect_plates=detect_plates,
-        )
-        result, trace = reading.result()
-        result["trace"] = trace
-        result["timestamp"] = timestamp
-        results.append(result)
+    ndx = 0
+    count_monitoring = CountMonitoring(total_samples=len(timestamps))
+    with Live(auto_refresh=False) as live:
+        print("Starting Processing")
+        for timestamp, trace in zip(timestamps, traces):
+            reading = Reading.from_trace(
+                trace,
+                segment_length_mm=segment_length_mm,
+                target_sample_spacing_mm=target_sample_spacing_mm,
+                evaluation_length_m=evaluation_length_m,
+                alpha=alpha,
+                start_mm=start_mm,
+                end_mm=end_mm,
+                detect_plates=detect_plates,
+                trace_type = "transverse",
+            )
+            result, trace = reading.result()
+            result["trace"] = trace
+            result["timestamp"] = timestamp
+            results.append(result)
+            ndx+=1
+            count_monitoring.current_sample = ndx
+            live.update(str(count_monitoring))
+            live.refresh()
 
     return results
+
+def extract_transverse_profile(row):
+    z_offset = row["z_offset_um"] / 1000.0
+    z_scale = row["z_scale_nm"] / 1000000.0
+    profile_data = np.asarray(json.loads(row["profile"]))
+    profile_data = profile_data.astype(np.double)
+    profile_data[profile_data==-32768] = np.nan
+    profile_data = (profile_data * z_scale) + z_offset
+    return profile_data
+
+def extract_transverse_x_arr(row):
+    x_offset = row["x_offset_um"] / 1000.0
+    x_scale = row["x_scale_nm"] / 1000000.0
+    x_width = row["width"]
+    x_arr = (np.asarray(range(x_width), dtype=np.double) * x_scale) + x_offset
+    return x_arr
+
+
+def read_traces_from_transverse_file(path):
+    # Read in the data
+    df = pd.read_csv(path, header=0)
+    df = df.drop(df.index[0:10])
+
+    # Only keep every 100th row
+    df = df.iloc[::100, :]
+    # Internal clock differences
+    df["int_diff"] = df["internal_timestamp"].diff()
+    # df["nzt_datetime_corrected"] = pd.to_datetime(df["utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
+    df["corrected_utc_timestamp"] = df["utc_timestamp"] + df["int_diff"].shift(-1)
+    df["nzt_datetime_corrected"] = pd.to_datetime(df["corrected_utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
+    # df["nzt_datetime_corrected"] = pd.to_datetime(df["corrected_utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
+    df["z_profile"] = df.apply(extract_transverse_profile, axis=1)
+    df["x_arr"] = df.apply(extract_transverse_x_arr, axis=1)
+
+    # This is done to match the other transverse processing
+    traces = []
+    timestamps = []
+    for row in df.itertuples():
+        trace = {}
+        trace['distance_mm'] = row.x_arr
+        trace['relative_height_mm'] = row.z_profile
+        traces.append(trace)
+        timestamps.append(row.nzt_datetime_corrected)
+
+    # timestamps = df["nzt_datetime_corrected"].tolist()
+    
+    return timestamps, [pd.DataFrame(tt) for tt in traces]

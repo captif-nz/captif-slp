@@ -86,6 +86,9 @@ class Reading:
         start_mm: Optional[float] = None,
         end_mm: Optional[float] = None,
         detect_plates: bool = False,
+        trace_type: Optional[str] = "generic",
+        transverse_start_mm: Optional[float] = 25,
+        transverse_end_mm: Optional[float] = 125,
     ):
         if segment_bins is not None:
             segment_length_mm = None
@@ -120,6 +123,10 @@ class Reading:
         resampled_trace = apply_lowpass_filter(
             resampled_trace, target_sample_spacing_mm
         )
+
+        if trace_type == "transverse":
+            resampled_trace = trim_trace(resampled_trace, transverse_start_mm, transverse_end_mm)
+        #     resampled_trace = resampled_trace[resampled_trace["distance_mm"].between(transverse_start_mm, transverse_end_mm)]
 
         return Reading(
             meta=meta,
