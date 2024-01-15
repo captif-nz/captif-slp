@@ -236,8 +236,8 @@ class Reading:
             proportion_valid_segments = valid_segments / len(gg)
             result = {
                 "distance_m": distance_m,
-                "mpd": gg.loc[gg["valid"], "msd"].mean(),
-                "stdev": gg.loc[gg["valid"], "msd"].std(),
+                "mpd": gg["msd"].mean(),
+                "stdev": gg["msd"].std(),
                 "valid_segments": valid_segments,
                 "proportion_valid_segments": proportion_valid_segments,
                 "is_valid": proportion_valid_segments >= 0.5,

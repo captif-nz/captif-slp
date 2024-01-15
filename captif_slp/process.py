@@ -211,14 +211,18 @@ def extract_transverse_x_arr(row):
 def read_traces_from_transverse_file(path):
     # Read in the data
     df = pd.read_csv(path, header=0)
-    df = df.drop(df.index[0:10])
+    # df = df.drop(df.index[0:10]) # Check the validity of this step
 
     # Only keep every 100th row
-    df = df.iloc[::100, :]
+    # df = df.iloc[::100, :]
     # Internal clock differences
     df["int_diff"] = df["internal_timestamp"].diff()
+    df["int_diff"].iloc[0] = 0
+    df["int_cumsum"] = df["int_diff"].cumsum()
+    # Cumulative sum of internal clock differences
     # df["nzt_datetime_corrected"] = pd.to_datetime(df["utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
-    df["corrected_utc_timestamp"] = df["utc_timestamp"] + df["int_diff"].shift(-1)
+    df["corrected_utc_timestamp"] = df["utc_timestamp"]
+    # df["corrected_utc_timestamp"] = df["utc_timestamp"].iloc[0]  + df["int_cumsum"] # This isn't correct...
     df["nzt_datetime_corrected"] = pd.to_datetime(df["corrected_utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
     # df["nzt_datetime_corrected"] = pd.to_datetime(df["corrected_utc_timestamp"]/1e6, unit='s', utc=True).map(lambda x: x.tz_convert('Pacific/Auckland'))
     df["z_profile"] = df.apply(extract_transverse_profile, axis=1)
