@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "captif-slp"
-version = "0.12"
+version = "0.13"
 description = ""
 authors = ["John Bull"]
 homepage = "https://github.com/captif-nz/captif-slp"
@@ -16,7 +16,7 @@ pydantic = "^1.8.2"
 scipy = "^1.7.1"
 matplotlib = "^3.4.3"
 psutil = "^5.8.0"
-pyrsona = "^0.5"
+pyrsona = ">=0.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
