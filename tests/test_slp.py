@@ -306,6 +306,33 @@ def test_calculate_msd():
     assert calculate_msd(trace) == ((1 + 2) / 2) - (3 / 10)
 
 
+def test_calculate_msd_no_split():
+    """
+    Test the no split option for the calculate_msd function. This option
+    will calculate the mean square deviation of the trace without splitting
+    the segment into two parts. I.e. The MSD is taken as the difference
+    between the single largest peak height and the mean of the trace.
+    """
+    trace = pd.DataFrame(
+        {
+            "distance_mm": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+            "relative_height_mm": [
+                1,
+                0,
+                0,
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                0,
+            ],
+        }
+    )
+    assert calculate_msd(trace, no_split=True) == 2.0 - (3.0 / 10)
+
+
 def test_find_plates_start_only(data_path):
     path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
     _, trace = load_reading(path)
