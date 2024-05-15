@@ -279,7 +279,7 @@ def trim_trace(
 
 
 def find_plates(trace: pd.DataFrame):
-    yy = trace["relative_height_mm"].interpolate("pad")
+    yy = trace["relative_height_mm"].ffill()
     is_plate = yy > PLATE_THRESHOLD
 
     if is_plate.sum() == 0:
@@ -310,7 +310,8 @@ def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_bins: list):
     yield from (
         tt
         for _, tt in trace.groupby(
-            pd.cut(trace["distance_mm"], segment_bins, include_lowest=True)
+            pd.cut(trace["distance_mm"], segment_bins, include_lowest=True),
+            observed=True,
         )
     )
 
