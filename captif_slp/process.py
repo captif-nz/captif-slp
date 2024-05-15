@@ -48,9 +48,9 @@ def _process_files(
             detect_plates=detect_plates,
         )
         result, trace = reading.result()
-        result[
-            "trace"
-        ] = trace  # TODO: fix this for when evaluation_length_m is not None
+        result["trace"] = (
+            trace  # TODO: fix this for when evaluation_length_m is not None
+        )
         results[path] = result
 
     return results

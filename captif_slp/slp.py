@@ -184,9 +184,9 @@ class Reading:
                 continue
 
             # Apply slope correction if "spot" measurement:
-            resampled_segment_trace[
-                "relative_height_mm_no_slope_correction"
-            ] = resampled_segment_trace["relative_height_mm"]
+            resampled_segment_trace["relative_height_mm_no_slope_correction"] = (
+                resampled_segment_trace["relative_height_mm"]
+            )
             if self.evaluation_length_m is None:
                 resampled_segment_trace = apply_slope_correction(
                     resampled_segment_trace
@@ -460,7 +460,7 @@ def calculate_msd(
     trace : pd.DataFrame
         The segment trace.
     no_split : bool, optional
-        Calculate the MSD without splitting the segment into two halves, by 
+        Calculate the MSD without splitting the segment into two halves, by
         default False
 
     Returns
@@ -469,10 +469,7 @@ def calculate_msd(
         The mean segment depth (MSD) in millimetres.
     """
     if no_split:
-        return (
-            trace["relative_height_mm"].max()
-            - trace["relative_height_mm"].mean()
-        )
+        return trace["relative_height_mm"].max() - trace["relative_height_mm"].mean()
     relative_height_mm = trace["relative_height_mm"]
     n_samples = len(relative_height_mm)
     i_midpoint = n_samples >> 1
