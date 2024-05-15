@@ -449,12 +449,13 @@ def dropout_correction_interpolate(trace: pd.DataFrame):
 
 
 def calculate_msd(trace: pd.DataFrame) -> float:
-    n_samples = len(trace)
-    i_midpoint = int(np.ceil(n_samples / 2))
-    peak1 = trace.iloc[:i_midpoint]["relative_height_mm"].max()
-    peak2 = trace.iloc[i_midpoint:]["relative_height_mm"].max()
+    relative_height_mm = trace["relative_height_mm"]
+    n_samples = len(relative_height_mm)
+    i_midpoint = n_samples >> 1
+    peak1 = relative_height_mm.iloc[:i_midpoint].max()
+    peak2 = relative_height_mm.iloc[i_midpoint:].max()
     peak_average = (peak1 + peak2) / 2
-    profile_average = trace["relative_height_mm"].mean()
+    profile_average = relative_height_mm.mean()
     return peak_average - profile_average
 
 
