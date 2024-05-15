@@ -449,7 +449,30 @@ def dropout_correction_interpolate(trace: pd.DataFrame):
     )
 
 
-def calculate_msd(trace: pd.DataFrame) -> float:
+def calculate_msd(
+    trace: pd.DataFrame,
+    no_split: bool = False,
+) -> float:
+    """Calculate the mean segment depth (MSD) for a segment.
+
+    Parameters
+    ----------
+    trace : pd.DataFrame
+        The segment trace.
+    no_split : bool, optional
+        Calculate the MSD without splitting the segment into two halves, by 
+        default False
+
+    Returns
+    -------
+    float
+        The mean segment depth (MSD) in millimetres.
+    """
+    if no_split:
+        return (
+            trace["relative_height_mm"].max()
+            - trace["relative_height_mm"].mean()
+        )
     relative_height_mm = trace["relative_height_mm"]
     n_samples = len(relative_height_mm)
     i_midpoint = n_samples >> 1
