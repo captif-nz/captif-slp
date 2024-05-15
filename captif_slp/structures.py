@@ -122,7 +122,7 @@ class _a2348fea(CaptifSlpFileStructure):
     )
 
 
-class ErpugFileStructure(BaseStructure):
+class ErpugFileStructure(FileStructure):
     class meta_model(BaseModel):
 
         sample_spacing_mm: float
