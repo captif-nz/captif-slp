@@ -403,6 +403,43 @@ class TestReading:
     def test_segments(self):
         pass
 
+    def test_msd_no_split(self):
+        resampled_trace = pd.DataFrame(
+            {  # using semetric trace to avoid slope correction
+                "distance_mm": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+                "relative_height_mm": [
+                    1,
+                    0,
+                    0,
+                    3,
+                    0,
+                    0,
+                    3,
+                    0,
+                    0,
+                    1,
+                ],
+                "dropout": [False] * 10,
+                "spike": [False] * 10,
+            }
+        )
+        reading = Reading(
+            meta={},
+            trace=resampled_trace,
+            resampled_trace=resampled_trace,
+            resampled_sample_spacing_mm=10,
+            alpha=3,
+            segment_length_mm=100,
+        )
+        assert reading.msd(no_split=True) == [
+            {
+                "segment_no": 0,
+                "msd": 3.0 - (8.0 / 10),
+                "valid": True,
+                "evaluation_length_position_m": None,
+            }
+        ]
+
 
 class TestSegment:
     def test_dropout_ratio(self):
@@ -419,3 +456,28 @@ class TestSegment:
 
     def test_is_valid(self):
         pass
+
+    def test_msd_no_split(self):
+        resampled_trace = pd.DataFrame(
+            {
+                "distance_mm": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
+                "relative_height_mm": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    0,
+                    3,
+                    0,
+                    0,
+                    0,
+                    0,
+                ],
+            }
+        )
+        segment = Segment(
+            segment_no=1,
+            trace=pd.DataFrame(),
+            resampled_trace=resampled_trace,
+        )
+        assert segment.msd(no_split=True) == 3.0 - (4.0 / 10)

@@ -32,8 +32,7 @@ class Segment:
         """Spike ratio for the segment according to section 7.5 of ISO 13473-1:2019."""
         return self.resampled_trace["spike"].mean()
 
-    @property
-    def msd(self) -> Optional[float]:
+    def msd(self, no_split: bool = False) -> Optional[float]:
         """
         Mean segment depth (MSD) in millimetres according to section 7.8 of
         ISO 13473-1:2019.
@@ -42,7 +41,7 @@ class Segment:
         spikes.
 
         """
-        return calculate_msd(self.resampled_trace)
+        return calculate_msd(self.resampled_trace, no_split=no_split)
 
     @property
     def is_valid(self) -> bool:
@@ -208,12 +207,12 @@ class Reading:
             )
         return segments_
 
-    def msd(self) -> List[dict]:
+    def msd(self, no_split=False) -> List[dict]:
         """Mean segment depths (MSD) for the segments making up the profile."""
         return [
             {
                 "segment_no": ss.segment_no,
-                "msd": ss.msd,
+                "msd": ss.msd(no_split=no_split),
                 "valid": ss.is_valid,
                 "evaluation_length_position_m": ss.evaluation_length_position_m,
             }
