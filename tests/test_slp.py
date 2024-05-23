@@ -306,9 +306,9 @@ def test_calculate_msd():
     assert calculate_msd(trace) == ((1 + 2) / 2) - (3 / 10)
 
 
-def test_calculate_msd_no_split():
+def test_calculate_msd_divide_segment_false():
     """
-    Test the no split option for the calculate_msd function. This option
+    Test the divide segment option for the calculate_msd function. This option
     will calculate the mean square deviation of the trace without splitting
     the segment into two parts. I.e. The MSD is taken as the difference
     between the single largest peak height and the mean of the trace.
@@ -330,7 +330,7 @@ def test_calculate_msd_no_split():
             ],
         }
     )
-    assert calculate_msd(trace, no_split=True) == 2.0 - (3.0 / 10)
+    assert calculate_msd(trace, divide_segment=False) == 2.0 - (3.0 / 10)
 
 
 def test_find_plates_start_only(data_path):
@@ -403,7 +403,7 @@ class TestReading:
     def test_segments(self):
         pass
 
-    def test_msd_no_split(self):
+    def test_msd_divide_segments_false(self):
         resampled_trace = pd.DataFrame(
             {  # using semetric trace to avoid slope correction
                 "distance_mm": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
@@ -430,8 +430,9 @@ class TestReading:
             resampled_sample_spacing_mm=10,
             alpha=3,
             segment_length_mm=100,
+            divide_segments=False,
         )
-        assert reading.msd(no_split=True) == [
+        assert reading.msd() == [
             {
                 "segment_no": 0,
                 "msd": 3.0 - (8.0 / 10),
@@ -455,9 +456,46 @@ class TestSegment:
         assert segment.spike_ratio == 1 / 5
 
     def test_is_valid(self):
-        pass
+        assert (
+            Segment(
+                segment_no=1,
+                trace=pd.DataFrame({"dropout": [True] * 1 + [False] * 9}),
+                resampled_trace=pd.DataFrame({"spike": [False] * 10}),
+            ).is_valid
+            is True
+        )
 
-    def test_msd_no_split(self):
+        assert (
+            Segment(
+                segment_no=1,
+                trace=pd.DataFrame({"dropout": [True] * 2 + [False] * 8}),
+                resampled_trace=pd.DataFrame({"spike": [False] * 10}),
+            ).is_valid
+            is False
+        )
+
+    def test_is_valid_custom_allowed_dropout_percent(self):
+        assert (
+            Segment(
+                segment_no=1,
+                trace=pd.DataFrame({"dropout": [True] * 2 + [False] * 8}),
+                resampled_trace=pd.DataFrame({"spike": [False] * 10}),
+                allowed_dropout_percent=20,
+            ).is_valid
+            is True
+        )
+
+        assert (
+            Segment(
+                segment_no=1,
+                trace=pd.DataFrame({"dropout": [True] * 3 + [False] * 7}),
+                resampled_trace=pd.DataFrame({"spike": [False] * 10}),
+                allowed_dropout_percent=20,
+            ).is_valid
+            is False
+        )
+
+    def test_msd_divide_segment_false(self):
         resampled_trace = pd.DataFrame(
             {
                 "distance_mm": [0, 10, 20, 30, 40, 50, 60, 70, 80, 90],
@@ -479,5 +517,6 @@ class TestSegment:
             segment_no=1,
             trace=pd.DataFrame(),
             resampled_trace=resampled_trace,
+            divide_segment=False,
         )
-        assert segment.msd(no_split=True) == 3.0 - (4.0 / 10)
+        assert segment.msd == 3.0 - (4.0 / 10)
