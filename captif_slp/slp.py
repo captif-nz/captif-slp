@@ -21,6 +21,8 @@ class Segment:
     segment_length_mm: int = 100
     resampled_sample_spacing_mm: float = 0.5
     evaluation_length_position_m: Optional[float] = None
+    allowed_dropout_percent: float = 10
+    divide_segment: bool = True
 
     @property
     def dropout_ratio(self) -> float:
@@ -32,16 +34,16 @@ class Segment:
         """Spike ratio for the segment according to section 7.5 of ISO 13473-1:2019."""
         return self.resampled_trace["spike"].mean()
 
-    def msd(self, no_split: bool = False) -> Optional[float]:
+    @property
+    def msd(self) -> Optional[float]:
         """
         Mean segment depth (MSD) in millimetres according to section 7.8 of
         ISO 13473-1:2019.
-
-        Has a value of None if the segment is invalid due to a high number of dropouts or
-        spikes.
-
         """
-        return calculate_msd(self.resampled_trace, no_split=no_split)
+        return calculate_msd(
+            self.resampled_trace,
+            divide_segment=self.divide_segment,
+        )
 
     @property
     def is_valid(self) -> bool:
@@ -50,7 +52,7 @@ class Segment:
         (sections 7.3 and 7.5 of ISO 13473-1:2019).
 
         """
-        if self.dropout_ratio > 0.1:
+        if self.dropout_ratio > (self.allowed_dropout_percent / 100):
             return False
         if self.spike_ratio > 0.05:
             return False
@@ -71,6 +73,8 @@ class Reading:
     start_mm: Optional[float] = None
     end_mm: Optional[float] = None
     detect_plates: bool = False
+    allowed_dropout_percent: float = 10
+    divide_segments: bool = True
 
     @classmethod
     def from_trace(
@@ -85,6 +89,8 @@ class Reading:
         start_mm: Optional[float] = None,
         end_mm: Optional[float] = None,
         detect_plates: bool = False,
+        allowed_dropout_percent: float = 10,
+        divide_segments: bool = True,
     ):
         if segment_bins is not None:
             segment_length_mm = None
@@ -132,6 +138,8 @@ class Reading:
             start_mm=start_mm,
             end_mm=end_mm,
             detect_plates=detect_plates,
+            allowed_dropout_percent=allowed_dropout_percent,
+            divide_segments=divide_segments,
         )
 
     @classmethod
@@ -147,6 +155,8 @@ class Reading:
         start_mm: Optional[float] = None,
         end_mm: Optional[float] = None,
         detect_plates: bool = False,
+        allowed_dropout_percent: float = 10,
+        divide_segments: bool = True,
     ):
         meta, trace = load_reading(path, parallel=parallel)
         return cls.from_trace(
@@ -160,6 +170,8 @@ class Reading:
             start_mm=start_mm,
             end_mm=end_mm,
             detect_plates=detect_plates,
+            allowed_dropout_percent=allowed_dropout_percent,
+            divide_segments=divide_segments,
         )
 
     @property
@@ -203,16 +215,18 @@ class Reading:
                     segment_length_mm=segment_length_mm,
                     resampled_sample_spacing_mm=self.resampled_sample_spacing_mm,
                     evaluation_length_position_m=evaluation_length_position_m,
+                    allowed_dropout_percent=self.allowed_dropout_percent,
+                    divide_segment=self.divide_segments,
                 )
             )
         return segments_
 
-    def msd(self, no_split=False) -> List[dict]:
+    def msd(self) -> List[dict]:
         """Mean segment depths (MSD) for the segments making up the profile."""
         return [
             {
                 "segment_no": ss.segment_no,
-                "msd": ss.msd(no_split=no_split),
+                "msd": ss.msd,
                 "valid": ss.is_valid,
                 "evaluation_length_position_m": ss.evaluation_length_position_m,
             }
@@ -450,7 +464,7 @@ def dropout_correction_interpolate(trace: pd.DataFrame):
 
 def calculate_msd(
     trace: pd.DataFrame,
-    no_split: bool = False,
+    divide_segment: bool = True,
 ) -> float:
     """Calculate the mean segment depth (MSD) for a segment.
 
@@ -458,16 +472,16 @@ def calculate_msd(
     ----------
     trace : pd.DataFrame
         The segment trace.
-    no_split : bool, optional
-        Calculate the MSD without splitting the segment into two halves, by
-        default False
+    divide_segment : bool, optional
+        Calculate the MSD by splitting the segment into two halves, by
+        default True.
 
     Returns
     -------
     float
         The mean segment depth (MSD) in millimetres.
     """
-    if no_split:
+    if not divide_segment:
         return trace["relative_height_mm"].max() - trace["relative_height_mm"].mean()
     relative_height_mm = trace["relative_height_mm"]
     n_samples = len(relative_height_mm)
