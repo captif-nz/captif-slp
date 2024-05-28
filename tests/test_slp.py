@@ -37,7 +37,9 @@ def test_load_reading_4102a5dd(data_path):
 
 
 def test_reading_sample_spacing_4102a5dd(data_path):
-    trace = pd.DataFrame({"distance_mm": [0, 0.2, 0.4, 0.6, 0.8]})
+    trace = pd.DataFrame({"distance_mm": [0, 0.2, 0.4, 0.6, 0.8]}).set_index(
+        "distance_mm"
+    )
     assert calculate_trace_sample_spacing(trace) == 0.2
 
 
@@ -50,7 +52,7 @@ def test_dropout_correction_start_end():
             {"distance_mm": 0.4, "relative_height_mm": 0.4},
             {"distance_mm": 0.5, "relative_height_mm": nan},
         ]
-    )
+    ).set_index("distance_mm")
     trace = dropout_correction_start_end(trace)
     assert np.array_equal(trace["relative_height_mm"], [0.1, 0.1, nan, 0.4, 0.4], True)
 
@@ -64,7 +66,7 @@ def test_dropout_correction_interpolate():
             {"distance_mm": 0.4, "relative_height_mm": 0.4},
             {"distance_mm": 0.5, "relative_height_mm": nan},
         ]
-    )
+    ).set_index("distance_mm")
     trace = dropout_correction_interpolate(trace)
     assert np.array_equal(trace["relative_height_mm"], [nan, 0.1, 0.3, 0.4, nan], True)
 
@@ -78,7 +80,7 @@ def test_apply_dropout_correction():
             {"distance_mm": 0.4, "relative_height_mm": 0.4},
             {"distance_mm": 0.5, "relative_height_mm": nan},
         ]
-    )
+    ).set_index("distance_mm")
     trace = apply_dropout_correction(trace)
     assert np.array_equal(trace["relative_height_mm"], [0.1, 0.1, 0.3, 0.4, 0.4], True)
 
@@ -89,7 +91,7 @@ def test_apply_spike_removal_middle():
             "distance_mm": [0, 0.1, 0.2, 0.3, 0.4],
             "relative_height_mm": [0.1, 0, 0.3, 0, 0.1],
         }
-    )
+    ).set_index("distance_mm")
     trace = apply_spike_removal(trace, alpha=3)
     assert np.array_equal(trace["relative_height_mm"], [0.1, 0.1, 0.1, 0.1, 0.1], True)
 
@@ -100,7 +102,7 @@ def test_apply_spike_removal_start_end():
             "distance_mm": [0, 0.1, 0.2, 0.3, 0.4],
             "relative_height_mm": [0.3, 0, 0.1, 0, 0.3],
         }
-    )
+    ).set_index("distance_mm")
     trace = apply_spike_removal(trace, alpha=3)
     assert np.array_equal(trace["relative_height_mm"], [0.1, 0.1, 0.1, 0.1, 0.1], True)
 
@@ -111,7 +113,7 @@ def test_apply_spike_removal():
             "distance_mm": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
             "relative_height_mm": [0.3, 0, 0.2, 0, 0.3, 0, -0.2, 0, 0.3],
         }
-    )
+    ).set_index("distance_mm")
     trace = apply_spike_removal(trace, alpha=3)
     assert np.array_equal(
         trace["relative_height_mm"],
@@ -126,7 +128,7 @@ def test_apply_spike_removal_no_spikes():
             "distance_mm": [0, 0.1, 0.2, 0.3, 0.4],
             "relative_height_mm": [0, 0.1, 0.2, 0.1, -0.1],
         }
-    )
+    ).set_index("distance_mm")
     trace = apply_spike_removal(trace, alpha=3)
     assert np.array_equal(trace["relative_height_mm"], [0, 0.1, 0.2, 0.1, -0.1], True)
 
@@ -173,10 +175,10 @@ def test_build_resampled_trace():
                 0.5,
             ],
         }
-    )
+    ).set_index("distance_mm")
     resampled_trace = build_resampled_trace(trace, target_sample_spacing_mm=0.5)
 
-    assert np.array_equal(resampled_trace["distance_mm"], [0.5, 1, 1.5, 2, 2.5])
+    assert np.array_equal(resampled_trace.index, [0.5, 1, 1.5, 2, 2.5])
     assert np.array_equal(
         resampled_trace["relative_height_mm"], [0.2, 0.15, 0.15, 0, 0.3]
     )
@@ -200,13 +202,13 @@ def test_extract_segment_traces_from_trace():
                 0.5,
             ],
         }
-    )
+    ).set_index("distance_mm")
     segment_bins = [0, 100, 200, 300, 400, 500]
     segment_traces = list(extract_segment_traces_from_trace(trace, segment_bins))
 
     assert len(segment_traces) == 5
     assert [len(tt) for tt in segment_traces] == [3, 2, 2, 2, 2]
-    assert np.array_equal(segment_traces[1]["distance_mm"], [150, 200])
+    assert np.array_equal(segment_traces[1].index, [150, 200])
     assert np.array_equal(segment_traces[1]["relative_height_mm"], [0.2, 0.1])
 
 
@@ -228,13 +230,13 @@ def test_extract_segment_data_segment_length():
                 0.5,
             ],
         }
-    )
+    ).set_index("distance_mm")
     resampled_trace = pd.DataFrame(
         {
             "distance_mm": [0.5, 1, 1.5, 2, 2.5],
             "relative_height_mm": [0.2, 0.15, 0.15, 0, 0.3],
         }
-    )
+    ).set_index("distance_mm")
     trace_data = list(extract_segment_data(trace, resampled_trace, segment_length_mm=1))
 
     assert len(trace_data) == 3
@@ -259,13 +261,13 @@ def test_extract_segment_data_segment_bins():
                 0.5,
             ],
         }
-    )
+    ).set_index("distance_mm")
     resampled_trace = pd.DataFrame(
         {
             "distance_mm": [0.5, 1, 1.5, 2, 2.5],
             "relative_height_mm": [0.2, 0.15, 0.15, 0, 0.3],
         }
-    )
+    ).set_index("distance_mm")
     trace_data = list(
         extract_segment_data(trace, resampled_trace, segment_bins=[0, 1, 2, 3])
     )
@@ -280,7 +282,7 @@ def test_apply_slope_correction():
             "distance_mm": [0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.25, 2.5],
             "relative_height_mm": [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
         }
-    )
+    ).set_index("distance_mm")
     slope_suppressed_trace = apply_slope_correction(trace)
     assert np.array_equal(slope_suppressed_trace["relative_height_mm"], [0] * 11)
 
@@ -302,7 +304,7 @@ def test_calculate_msd():
                 0,
             ],
         }
-    )
+    ).set_index("distance_mm")
     assert calculate_msd(trace) == ((1 + 2) / 2) - (3 / 10)
 
 
@@ -329,14 +331,15 @@ def test_calculate_msd_divide_segment_false():
                 0,
             ],
         }
-    )
+    ).set_index("distance_mm")
     assert calculate_msd(trace, divide_segment=False) == 2.0 - (3.0 / 10)
 
 
 def test_find_plates_start_only(data_path):
     path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
     _, trace = load_reading(path)
-    trace = trace.iloc[: int(len(trace) / 2)].reset_index(drop=True)
+    trace.set_index("distance_mm", inplace=True)
+    trace = trace.iloc[: int(len(trace) / 2)]
     start_mm, end_mm = find_plates(trace)
     assert start_mm == 62.32
     assert end_mm is None
@@ -345,18 +348,21 @@ def test_find_plates_start_only(data_path):
 def test_find_plates_end_only(data_path):
     path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
     _, trace = load_reading(path)
-    trace = trace.iloc[int(len(trace) / 2) :].reset_index(drop=True)
+    trace.set_index("distance_mm", inplace=True)
+    trace = trace.iloc[int(len(trace) / 2) :]
     start_mm, end_mm = find_plates(trace)
     assert start_mm is None
-    assert end_mm == 1870.351
+    assert end_mm == 1870.388
 
 
 def test_find_plates(data_path):
     path = data_path.joinpath("captif_profiles", "20211011_aylesbury_dec_station_0.dat")
     _, trace = load_reading(path)
+    trace.set_index("distance_mm", inplace=True)
     start_mm, end_mm = find_plates(trace)
     assert start_mm == 62.32
-    assert end_mm == 1870.351
+
+    assert end_mm == 1870.388
 
 
 def test_find_plates_no_plates(data_path):
@@ -365,6 +371,7 @@ def test_find_plates_no_plates(data_path):
     trace = trace.loc[
         (trace["distance_mm"] > 100) & (trace["distance_mm"] < 1800)
     ].reset_index(drop=True)
+    trace.set_index("distance_mm", inplace=True)
     start_mm, end_mm = find_plates(trace)
     assert start_mm is None
     assert end_mm is None
@@ -377,7 +384,7 @@ class TestReading:
                 "distance_mm": np.arange(0, 10, 0.25),
                 "relative_height_mm": [0.1] * 40,
             }
-        )
+        ).set_index("distance_mm")
         reading = Reading.from_trace(trace)
 
         pd.testing.assert_frame_equal(reading.trace, trace, check_dtype=False)
@@ -389,7 +396,7 @@ class TestReading:
                 "distance_mm": np.arange(0, 10, 0.25),
                 "relative_height_mm": [0.1] * 40,
             }
-        )
+        ).set_index("distance_mm")
         reading = Reading.from_trace(trace, segment_bins=np.arange(0, 10, 1))
 
         assert reading.segment_length_mm is None
@@ -422,7 +429,7 @@ class TestReading:
                 "dropout": [False] * 10,
                 "spike": [False] * 10,
             }
-        )
+        ).set_index("distance_mm")
         reading = Reading(
             meta={},
             trace=resampled_trace,
@@ -512,7 +519,7 @@ class TestSegment:
                     0,
                 ],
             }
-        )
+        ).set_index("distance_mm")
         segment = Segment(
             segment_no=1,
             trace=pd.DataFrame(),

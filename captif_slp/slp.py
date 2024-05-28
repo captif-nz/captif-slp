@@ -1,3 +1,4 @@
+from line_profiler import profile
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
@@ -77,6 +78,7 @@ class Reading:
     divide_segments: bool = True
 
     @classmethod
+    @profile
     def from_trace(
         cls,
         trace,
@@ -92,6 +94,9 @@ class Reading:
         allowed_dropout_percent: float = 10,
         divide_segments: bool = True,
     ):
+        if "distance_mm" in trace.columns:
+            trace.set_index("distance_mm", inplace=True)
+
         if segment_bins is not None:
             segment_length_mm = None
 
@@ -204,7 +209,7 @@ class Reading:
                 )
 
             evaluation_length_position_m = calculate_evaluation_length_position(
-                segment_trace["distance_mm"].min(), self.evaluation_length_m
+                segment_trace.index.min(), self.evaluation_length_m
             )
 
             segments_.append(
@@ -223,15 +228,17 @@ class Reading:
 
     def msd(self) -> List[dict]:
         """Mean segment depths (MSD) for the segments making up the profile."""
-        return [
-            {
-                "segment_no": ss.segment_no,
-                "msd": ss.msd,
-                "valid": ss.is_valid,
-                "evaluation_length_position_m": ss.evaluation_length_position_m,
-            }
-            for ss in self.segments
-        ]
+        results = []
+        for ss in self.segments:
+            results.append(
+                {
+                    "segment_no": ss.segment_no,
+                    "msd": ss.msd,
+                    "valid": ss.is_valid,
+                    "evaluation_length_position_m": ss.evaluation_length_position_m,
+                }
+            )
+        return results
 
     def mpd(self, include_meta: bool = False) -> Union[dict, pd.DataFrame]:
         """Mean profile depth (MPD) results for each evaluation length."""
@@ -263,9 +270,9 @@ class Reading:
         """
         return (
             self.mpd(include_meta=True),
-            self.resampled_trace[["distance_mm", "relative_height_mm"]].to_dict(
-                "records"
-            ),
+            self.resampled_trace.reset_index()[
+                ["distance_mm", "relative_height_mm"]
+            ].to_dict("records"),
         )
 
 
@@ -281,12 +288,11 @@ def trim_trace(
     end_mm: Optional[float] = None,
 ):
     if end_mm:
-        trace = trace.loc[trace["distance_mm"] < end_mm]
+        trace = trace.loc[trace.index < end_mm]
 
     if start_mm:
-        trace = trace.loc[trace["distance_mm"] >= start_mm]
-        trace["distance_mm"] -= start_mm
-        trace.reset_index(drop=True, inplace=True)
+        trace = trace.loc[trace.index >= start_mm]
+        trace.index -= start_mm
 
     return trace
 
@@ -305,14 +311,18 @@ def find_plates(trace: pd.DataFrame):
 
     start_mm, end_mm = None, None
     try:
-        ii_start = trace.loc[:i_midpoint].loc[diff.loc[:i_midpoint]].iloc[-1].name
-        start_mm = trace.loc[ii_start, "distance_mm"] + PLATE_BUFFER
+        start_mm = (
+            trace.iloc[:i_midpoint].loc[diff.iloc[:i_midpoint]].iloc[-1].name
+            + PLATE_BUFFER
+        )
     except Exception:
         pass
 
     try:
-        ii_end = trace.loc[i_midpoint:].loc[diff.loc[i_midpoint:]].iloc[0].name - 1
-        end_mm = trace.loc[ii_end, "distance_mm"] - PLATE_BUFFER
+        end_mm = (
+            trace.iloc[i_midpoint:].loc[diff.iloc[i_midpoint:]].iloc[0].name
+            - PLATE_BUFFER
+        )
     except Exception:
         pass
 
@@ -323,7 +333,7 @@ def extract_segment_traces_from_trace(trace: pd.DataFrame, segment_bins: list):
     yield from (
         tt
         for _, tt in trace.groupby(
-            pd.cut(trace["distance_mm"], segment_bins, include_lowest=True),
+            pd.cut(trace.index, segment_bins, include_lowest=True),
             observed=True,
         )
     )
@@ -347,6 +357,15 @@ def extract_segment_data(
     if segment_bins is None:
         segment_bins = generate_trace_bins(trace, segment_length_mm)
 
+    if (
+        len(segment_bins) == 2
+        and segment_bins[0] <= trace.index.min()
+        and segment_bins[1] >= trace.index.max()
+    ):
+        # Skip segment extraction if only one segment is present. This is
+        # about 5x faster for cases involving a single segment.
+        return [(trace, resampled_trace, np.diff(segment_bins)[0])]
+
     return zip(
         extract_segment_traces_from_trace(trace, segment_bins),
         extract_segment_traces_from_trace(resampled_trace, segment_bins),
@@ -355,26 +374,26 @@ def extract_segment_data(
 
 
 def generate_trace_bins(trace: pd.DataFrame, bin_width_mm: float):
-    return np.arange(0, trace["distance_mm"].max() + bin_width_mm, bin_width_mm)
+    return np.arange(0, trace.index.max() + bin_width_mm, bin_width_mm)
 
 
 def build_resampled_trace(trace: pd.DataFrame, target_sample_spacing_mm: float):
     if calculate_trace_sample_spacing(trace) == target_sample_spacing_mm:
         return trace.copy()
 
-    trace["group"] = np.ceil(trace["distance_mm"] / target_sample_spacing_mm)
-    g0 = trace.loc[0, "group"]
-    trace.loc[0, "group"] = 1 if g0 == 0 else g0
+    groups = np.ceil(trace.index.values / target_sample_spacing_mm)
+    groups[0] = 1 if groups[0] == 0 else groups[0]
 
-    resampled_trace = trace[["group", "relative_height_mm"]].groupby("group").mean()
-    resampled_trace["distance_mm"] = resampled_trace.index * target_sample_spacing_mm
-    resampled_trace.reset_index(drop=True, inplace=True)
-    trace.drop(columns=["group"], inplace=True)
-
-    resampled_trace["relative_height_mm"] = resampled_trace["relative_height_mm"].round(
-        6
-    )
-    return resampled_trace
+    return pd.DataFrame(
+        {
+            "distance_mm": np.sort(np.unique(groups) * target_sample_spacing_mm),
+            "relative_height_mm": trace["relative_height_mm"]
+            .groupby(groups)
+            .mean()
+            .round(6)
+            .values,
+        },
+    ).set_index("distance_mm")
 
 
 def load_reading(path: Union[str, Path], parallel: bool = True):
@@ -389,7 +408,7 @@ def append_dropout_column(trace: pd.DataFrame):
 
 
 def apply_dropout_correction(trace: pd.DataFrame):
-    if trace["relative_height_mm"].isnull().sum() == 0:
+    if not trace["relative_height_mm"].isnull().any():
         return trace
     trace = dropout_correction_start_end(trace)
     trace = dropout_correction_interpolate(trace)
@@ -398,7 +417,7 @@ def apply_dropout_correction(trace: pd.DataFrame):
 
 
 def calculate_trace_sample_spacing(trace: pd.DataFrame) -> float:
-    return trace["distance_mm"].diff().mean()
+    return np.diff(trace.index.values).mean()
 
 
 def append_spike_column(trace: pd.DataFrame, alpha: float = 3):
@@ -410,6 +429,7 @@ def append_spike_column(trace: pd.DataFrame, alpha: float = 3):
     return trace
 
 
+@profile
 def apply_spike_removal(trace: pd.DataFrame, alpha: float = 3):
     trace = append_spike_column(trace, alpha)
     trace.loc[trace["spike"], "relative_height_mm"] = None
@@ -417,10 +437,11 @@ def apply_spike_removal(trace: pd.DataFrame, alpha: float = 3):
 
 
 def apply_slope_correction(trace: pd.DataFrame):
-    p = np.polyfit(trace["distance_mm"], trace["relative_height_mm"], deg=1)
-    trace["slope_correction"] = (trace["distance_mm"] * p[0]) + p[1]
-    trace["relative_height_mm"] -= trace["slope_correction"]
-    trace["relative_height_mm"] = trace["relative_height_mm"].round(6)
+    p = np.polyfit(trace.index, trace["relative_height_mm"], deg=1)
+    trace["slope_correction"] = (trace.index * p[0]) + p[1]
+    trace["relative_height_mm"] = (
+        trace["relative_height_mm"] - trace["slope_correction"]
+    ).round(6)
     return trace
 
 
@@ -453,13 +474,7 @@ def dropout_correction_start_end(trace: pd.DataFrame):
 
 
 def dropout_correction_interpolate(trace: pd.DataFrame):
-    return (
-        trace.set_index(
-            "distance_mm", drop=True
-        )  # so distance weighing can be used in interpolation
-        .interpolate(method="index", limit_area="inside")
-        .reset_index(drop=False)  # move distance back to a column
-    )
+    return trace.interpolate(method="index", limit_area="inside")
 
 
 def calculate_msd(
