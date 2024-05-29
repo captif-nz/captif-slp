@@ -1,7 +1,8 @@
-from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from itertools import chain
+import multiprocessing
 from pathlib import Path
 import pickle
-from queue import Queue
 import pandas as pd
 import numpy as np
 from pytest import mark
@@ -101,38 +102,46 @@ def calculate_msd_for_trace(trace: pd.DataFrame):
         pass
 
 
-def producer(in_queue, laser_path):
+def process_subset(func_args):
+    laser_path, laser_start_sample, laser_end_sample = func_args
     with open(laser_path, "rb") as f:
-        for _ in range(5000):
+        _ = pickle.load(f)  # skip the first profile
+        size = f.tell()
+        f.seek(size * laser_start_sample)
+        n_readings = laser_end_sample - laser_start_sample
+        results = []
+        for _ in range(n_readings):
             try:
-                in_queue.put(pickle.load(f))
+                raw_reading = pickle.load(f)
+                trace = convert_raw_laser_profile_to_trace(raw_reading)
+                results.append(calculate_msd_for_trace(trace))
             except EOFError:
                 pass
-        in_queue.put(None)  # signal that we're done
-
-
-def consumer(in_queue, results):
-    while True:
-        value = in_queue.get()
-        if value is None:
-            break
-        trace = convert_raw_laser_profile_to_trace(value)
-        results.append(calculate_msd_for_trace(trace))
+    return results
 
 
 @mark.slow
 def test_process_cpx_laser_file(data_path):
     laser_path = data_path / "cpx_profiles" / "01_laser_lwp_0.pkl"
 
-    in_queue = Queue(maxsize=10)
-    results = []
+    records = 16000
+    processes = 16
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        executor.submit(producer, in_queue, laser_path)
-        executor.submit(consumer, in_queue, results)
+    subsets = [
+        (i * records // processes, (i + 1) * records // processes)
+        for i in range(processes)
+    ]
 
-    assert len(results) == 5000
+    func_args = [(laser_path, start, end) for start, end in subsets]
+
+    with multiprocessing.Pool(processes) as pool:
+        results = pool.map(process_subset, func_args)
+
+    results = list(chain(*results))
+    assert len(results) == records
 
 
 if __name__ == "__main__":
+    t0 = datetime.now()
     test_process_cpx_laser_file(Path("data"))
+    print(datetime.now() - t0)
