@@ -1,5 +1,7 @@
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import pickle
+from queue import Queue
 import pandas as pd
 import numpy as np
 from pytest import mark
@@ -99,18 +101,37 @@ def calculate_msd_for_trace(trace: pd.DataFrame):
         pass
 
 
+def producer(in_queue, laser_path):
+    with open(laser_path, "rb") as f:
+        for _ in range(5000):
+            try:
+                in_queue.put(pickle.load(f))
+            except EOFError:
+                pass
+        in_queue.put(None)  # signal that we're done
+
+
+def consumer(in_queue, results):
+    while True:
+        value = in_queue.get()
+        if value is None:
+            break
+        trace = convert_raw_laser_profile_to_trace(value)
+        results.append(calculate_msd_for_trace(trace))
+
+
 @mark.slow
 def test_process_cpx_laser_file(data_path):
     laser_path = data_path / "cpx_profiles" / "01_laser_lwp_0.pkl"
 
-    with open(laser_path, "rb") as f:
-        for _ in range(1000):
-            try:
-                raw_reading = pickle.load(f)
-                trace = convert_raw_laser_profile_to_trace(raw_reading)
-                _ = calculate_msd_for_trace(trace)
-            except EOFError:
-                break
+    in_queue = Queue(maxsize=10)
+    results = []
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        executor.submit(producer, in_queue, laser_path)
+        executor.submit(consumer, in_queue, results)
+
+    assert len(results) == 5000
 
 
 if __name__ == "__main__":
