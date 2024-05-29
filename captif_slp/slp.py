@@ -1,4 +1,3 @@
-from line_profiler import profile
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
@@ -78,7 +77,6 @@ class Reading:
     divide_segments: bool = True
 
     @classmethod
-    @profile
     def from_trace(
         cls,
         trace,
@@ -483,7 +481,6 @@ def dropout_correction_interpolate(trace: pd.DataFrame):
     return trace.interpolate(method="index", limit_area="inside")
 
 
-@profile
 def calculate_msd(
     trace: pd.DataFrame,
     divide_segment: bool = True,

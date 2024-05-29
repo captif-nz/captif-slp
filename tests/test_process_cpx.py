@@ -1,4 +1,3 @@
-from line_profiler import profile
 from pathlib import Path
 import pickle
 import pandas as pd
@@ -81,7 +80,6 @@ def check_trace_valid(trace: pd.DataFrame):
     return not np.isnan(trace["relative_height_mm"].values).all()
 
 
-@profile
 def calculate_msd_for_trace(trace: pd.DataFrame):
     trace = trim_trace(trace, *TEXTURE_PROFILE_RANGE)
     if not check_trace_valid(trace):
