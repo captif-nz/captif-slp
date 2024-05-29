@@ -1,3 +1,4 @@
+from pytest import approx
 from captif_slp.process import process_files
 
 
@@ -18,5 +19,9 @@ def test_process_files(data_path):
         {"mpd": 3.2777511138235296, "stdev": 0.8530880184893223},
     ]
     assert all(
-        (rr[kk] == vv for rr, rr_ in zip(results, results_) for kk, vv in rr_.items())
+        (
+            rr[kk] == approx(vv)
+            for rr, rr_ in zip(results, results_)
+            for kk, vv in rr_.items()
+        )
     )

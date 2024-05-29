@@ -384,16 +384,18 @@ def build_resampled_trace(trace: pd.DataFrame, target_sample_spacing_mm: float):
     groups = np.ceil(trace.index.values / target_sample_spacing_mm)
     groups[0] = 1 if groups[0] == 0 else groups[0]
 
-    return pd.DataFrame(
+    df = pd.DataFrame(
         {
-            "distance_mm": np.sort(np.unique(groups) * target_sample_spacing_mm),
             "relative_height_mm": trace["relative_height_mm"]
             .groupby(groups)
             .mean()
             .round(6)
             .values,
         },
-    ).set_index("distance_mm")
+        index=np.sort(np.unique(groups) * target_sample_spacing_mm),
+    )
+    df.index.name = "distance_mm"  # this is faster than using set_index.
+    return df
 
 
 def load_reading(path: Union[str, Path], parallel: bool = True):
@@ -403,16 +405,22 @@ def load_reading(path: Union[str, Path], parallel: bool = True):
 
 
 def append_dropout_column(trace: pd.DataFrame):
-    trace["dropout"] = trace["relative_height_mm"].isnull()
+    trace["dropout"] = np.isnan(trace["relative_height_mm"].values)
     return trace
 
 
 def apply_dropout_correction(trace: pd.DataFrame):
-    if not trace["relative_height_mm"].isnull().any():
+    if not np.isnan(trace["relative_height_mm"].values).any():
         return trace
-    trace = dropout_correction_start_end(trace)
-    trace = dropout_correction_interpolate(trace)
-    trace["relative_height_mm"] = trace["relative_height_mm"].round(6)
+
+    if np.isnan(trace["relative_height_mm"].values[0]) or np.isnan(
+        trace["relative_height_mm"].values[-1]
+    ):
+        trace = dropout_correction_start_end(trace)
+
+    if np.isnan(trace["relative_height_mm"].values).any():
+        return dropout_correction_interpolate(trace)
+
     return trace
 
 
@@ -422,61 +430,60 @@ def calculate_trace_sample_spacing(trace: pd.DataFrame) -> float:
 
 def append_spike_column(trace: pd.DataFrame, alpha: float = 3):
     threshold = round(alpha * calculate_trace_sample_spacing(trace), 6)
-    ss = (trace["relative_height_mm"].diff().abs() >= threshold).to_numpy()[1:]
+    ss = np.abs(np.diff(trace["relative_height_mm"].values)) >= threshold
+
+    if not ss.any():
+        trace["spike"] = False
+        return trace
+
     trace["spike"] = np.insert(ss, 0, False) | np.append(  # spikes in forward direction
         ss, False
     )  # spikes in reverse direction
     return trace
 
 
-@profile
 def apply_spike_removal(trace: pd.DataFrame, alpha: float = 3):
     trace = append_spike_column(trace, alpha)
+    if not trace["spike"].any():
+        return trace
     trace.loc[trace["spike"], "relative_height_mm"] = None
     return apply_dropout_correction(trace)
 
 
 def apply_slope_correction(trace: pd.DataFrame):
-    p = np.polyfit(trace.index, trace["relative_height_mm"], deg=1)
-    trace["slope_correction"] = (trace.index * p[0]) + p[1]
+    p = np.polyfit(trace.index.values, trace["relative_height_mm"].values, deg=1)
+    trace["slope_correction"] = (trace.index.values * p[0]) + p[1]
     trace["relative_height_mm"] = (
-        trace["relative_height_mm"] - trace["slope_correction"]
+        trace["relative_height_mm"].values - trace["slope_correction"].values
     ).round(6)
     return trace
 
 
 def apply_lowpass_filter(trace: pd.DataFrame, sample_spacing_mm: float):
-    sos = build_lowpass_filter(sample_spacing_mm)
-    trace["relative_height_mm"] = sosfiltfilt(sos, trace["relative_height_mm"])
+    trace["relative_height_mm"] = sosfiltfilt(
+        build_lowpass_filter(sample_spacing_mm),
+        trace["relative_height_mm"].values,
+    )
     return trace
 
 
 def apply_highpass_filter(trace: pd.DataFrame, sample_spacing_mm: float):
-    sos = build_highpass_filter(sample_spacing_mm)
-    trace["relative_height_mm"] = sosfiltfilt(sos, trace["relative_height_mm"])
+    trace["relative_height_mm"] = sosfiltfilt(
+        build_highpass_filter(sample_spacing_mm),
+        trace["relative_height_mm"].values,
+    )
     return trace
 
 
 def dropout_correction_start_end(trace: pd.DataFrame):
-    yy = trace["relative_height_mm"].copy()
-    valid_index = yy.loc[~yy.isna()].index
-
-    # Fill start of trace if it contains dropouts:
-    if np.isnan(yy.iloc[0]):
-        yy.loc[: valid_index[0]] = yy.loc[valid_index[0]]
-
-    # Fill end of trace if it contains dropouts:
-    if np.isnan(yy.iloc[-1]):
-        yy.loc[valid_index[-1] :] = yy.loc[valid_index[-1]]
-
-    trace["relative_height_mm"] = yy
-    return trace
+    return trace.bfill(limit_area="outside").ffill(limit_area="outside")
 
 
 def dropout_correction_interpolate(trace: pd.DataFrame):
     return trace.interpolate(method="index", limit_area="inside")
 
 
+@profile
 def calculate_msd(
     trace: pd.DataFrame,
     divide_segment: bool = True,
@@ -497,15 +504,16 @@ def calculate_msd(
         The mean segment depth (MSD) in millimetres.
     """
     if not divide_segment:
-        return trace["relative_height_mm"].max() - trace["relative_height_mm"].mean()
-    relative_height_mm = trace["relative_height_mm"]
+        return (
+            trace["relative_height_mm"].values.max()
+            - trace["relative_height_mm"].values.mean()
+        )
+    relative_height_mm = trace["relative_height_mm"].values
     n_samples = len(relative_height_mm)
     i_midpoint = n_samples >> 1
-    peak1 = relative_height_mm.iloc[:i_midpoint].max()
-    peak2 = relative_height_mm.iloc[i_midpoint:].max()
-    peak_average = (peak1 + peak2) / 2
-    profile_average = relative_height_mm.mean()
-    return peak_average - profile_average
+    peak1 = relative_height_mm[:i_midpoint].max()
+    peak2 = relative_height_mm[i_midpoint:].max()
+    return ((peak1 + peak2) / 2) - relative_height_mm.mean()
 
 
 def calculate_evaluation_length_position(

@@ -38,7 +38,9 @@ def convert_raw_laser_profile_to_trace(raw: dict):
     x *= raw["x_scale_nm"] / 1000000.0
     x += raw["x_offset_um"] / 1000.0
 
-    return pd.DataFrame({"distance_mm": x, "relative_height_mm": z})
+    df = pd.DataFrame({"relative_height_mm": z}, index=x)
+    df.index.name = "distance_mm"
+    return df
 
 
 def trim_trace(trace: pd.DataFrame, start_mm: float, end_mm: float):
@@ -59,8 +61,8 @@ def trim_trace(trace: pd.DataFrame, start_mm: float, end_mm: float):
         Trimmed trace.
     """
     return trace.loc[
-        (trace["distance_mm"] >= start_mm) & (trace["distance_mm"] <= end_mm)
-    ].reset_index(drop=True)
+        (trace.index.values >= start_mm) & (trace.index.values <= end_mm)
+    ].copy()
 
 
 def check_trace_valid(trace: pd.DataFrame):
@@ -76,7 +78,7 @@ def check_trace_valid(trace: pd.DataFrame):
     bool
         True if the trace contains valid data, False otherwise.
     """
-    return trace["relative_height_mm"].notnull().any()
+    return not np.isnan(trace["relative_height_mm"].values).all()
 
 
 @profile

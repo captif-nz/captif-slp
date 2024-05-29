@@ -86,6 +86,7 @@ def test_apply_dropout_correction():
 
 
 def test_apply_spike_removal_middle():
+
     trace = pd.DataFrame(
         {
             "distance_mm": [0, 0.1, 0.2, 0.3, 0.4],
@@ -116,7 +117,7 @@ def test_apply_spike_removal():
     ).set_index("distance_mm")
     trace = apply_spike_removal(trace, alpha=3)
     assert np.array_equal(
-        trace["relative_height_mm"],
+        trace["relative_height_mm"].round(6),
         [0.2, 0.2, 0.2, 0.1, 0, -0.1, -0.2, -0.2, -0.2],
         equal_nan=True,
     )
