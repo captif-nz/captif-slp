@@ -474,7 +474,16 @@ def apply_highpass_filter(trace: pd.DataFrame, sample_spacing_mm: float):
 
 
 def dropout_correction_start_end(trace: pd.DataFrame):
-    return trace.bfill(limit_area="outside").ffill(limit_area="outside")
+    valid_records = trace.loc[~np.isnan(trace["relative_height_mm"].values)]
+    if np.isnan(trace["relative_height_mm"].values)[0]:
+        trace.loc[: valid_records.index[0]] = valid_records[
+            "relative_height_mm"
+        ].values[0]
+    if np.isnan(trace["relative_height_mm"].values)[-1]:
+        trace.loc[valid_records.index[-1] :, "relative_height_mm"] = valid_records[
+            "relative_height_mm"
+        ].values[-1]
+    return trace
 
 
 def dropout_correction_interpolate(trace: pd.DataFrame):
