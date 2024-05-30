@@ -2,4 +2,4 @@ import captif_slp
 
 
 def test_version():
-    captif_slp.__version__ == "0.17"
+    captif_slp.__version__ == "0.18"
