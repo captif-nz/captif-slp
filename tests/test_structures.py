@@ -84,6 +84,22 @@ class TestCaptifSlpFileStructure:
         ]
         assert structure_id == "a2348fea"
 
+    def test_texture_reader_265f96a8(self, data_path):
+        path = data_path.joinpath("structures", "265f96a8.dat")
+        meta, table_rows, structure_id = CaptifSlpFileStructure.read(path)
+
+        assert meta == {
+            "datetime": datetime(2025, 3, 5, 13, 38, 0),
+            "file_number": 6,
+        }
+        assert table_rows == [
+            {"distance_mm": 0, "relative_height_mm": -4.142},
+            {"distance_mm": 0.037, "relative_height_mm": -4.142},
+            {"distance_mm": 0.075, "relative_height_mm": -4.110},
+            {"distance_mm": 0.112, "relative_height_mm": -4.096},
+        ]
+        assert structure_id == "265f96a8"
+
 
 class TestErpugFileStructure:
     def test_texture_reader_7cd12dee(self, data_path):

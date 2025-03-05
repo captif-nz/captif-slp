@@ -122,6 +122,22 @@ class _a2348fea(CaptifSlpFileStructure):
     )
 
 
+class _265f96a8(CaptifSlpFileStructure):
+
+    structure = (
+        "Road Name\t{}\t\n"
+        "Ref Station\t\t\n"
+        "Start Pos (m)\t\t\n"
+        "Direction\t{}\t\n"
+        "Wheel Path\t{}\t\n"
+        "Date\t{datetime}\n"
+        "File No.\t{file_number}\t\n"
+        "Current Pos\t{}\t\n"
+        "*****DATA*****\t\t\n"
+        "Data Point No:\tDistance (mm)\tDepth (mm)\n"
+    )
+
+
 class ErpugFileStructure(FileStructure):
     class meta_model(BaseModel):
 
