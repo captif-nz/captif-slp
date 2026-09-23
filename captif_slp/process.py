@@ -9,7 +9,6 @@ from unsync import unsync
 
 from .slp import Reading
 
-
 CPU_COUNT = multiprocessing.cpu_count()
 OS = system()
 

@@ -8,7 +8,6 @@ from scipy.signal import sosfiltfilt
 from .signal import build_highpass_filter, build_lowpass_filter
 from .structures import FileStructure
 
-
 PLATE_THRESHOLD = 30  # Height values above PLATE_THRESHOLD are treated as a plate.
 PLATE_BUFFER = 2  # Buffer added/subtracted from the plate location.
 

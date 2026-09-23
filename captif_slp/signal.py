@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from scipy import signal
 from functools import lru_cache
 
-
 LOWPASS_FILTER_CUTOFF_WAVELENGTH_MM = 2.4
 HIGHPASS_FILTER_CUTOFF_WAVELENGTH_MM = 174.2
 

@@ -9,7 +9,6 @@ from pytest import mark
 
 from captif_slp import slp
 
-
 TEXTURE_PROFILE_RANGE = (-25, 25)
 TEXTURE_ALPHA = 6
 TEXTURE_ALLOWED_DROPOUT_PERCENT = 0.2
