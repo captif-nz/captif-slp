@@ -13,15 +13,24 @@ def test_process_files(data_path):
     assert all((len(rr["trace"]) > 0 for rr in results))  # expect trace field
 
     # Check MPD and standard deviation are correct:
-    results_ = [
-        {"mpd": 3.420159709285714, "stdev": 0.8103657268479817},
-        {"mpd": 3.0331992396875003, "stdev": 0.44966725032778604},
-        {"mpd": 3.2777511138235296, "stdev": 0.8530880184893223},
-    ]
+    results_ = {
+        "20211011_aylesbury_dec_station_10.dat": {
+            "mpd": 3.420159709285714,
+            "stdev": 0.8103657268479817,
+        },
+        "20211011_aylesbury_dec_station_1.dat": {
+            "mpd": 3.0331992396875003,
+            "stdev": 0.44966725032778604,
+        },
+        "20211011_aylesbury_dec_station_0.dat": {
+            "mpd": 3.2777511138235296,
+            "stdev": 0.8530880184893223,
+        },
+    }
     assert all(
         (
             rr[kk] == approx(vv)
-            for rr, rr_ in zip(results, results_)
-            for kk, vv in rr_.items()
+            for rr in results
+            for kk, vv in results_[rr["filename"]].items()
         )
     )

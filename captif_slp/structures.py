@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime as dt
 from pydantic import BaseModel, validator, ValidationError
 from pyrsona import BaseStructure
 from typing import Optional, Union
@@ -11,15 +11,15 @@ class FileStructure(BaseStructure):
 class CaptifSlpFileStructure(FileStructure):
     class meta_model(BaseModel):
 
-        datetime: Optional[datetime]
-        file_number: Optional[int]
+        datetime: Optional[dt.datetime] = None
+        file_number: Optional[int] = None
 
         @validator("datetime", pre=True)
         def parse_date(cls, value):
             fmt = ["%d/%m/%Y\t%I:%M %p", "%d/%m/%Y"]
             for ff in fmt:
                 try:
-                    return datetime.strptime(value, ff)
+                    return dt.datetime.strptime(value, ff)
                 except Exception:
                     pass
             raise ValidationError
